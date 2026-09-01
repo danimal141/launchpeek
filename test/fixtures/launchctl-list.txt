@@ -1,0 +1,10 @@
+PID	Status	Label
+-	0	org.danimal141.weekly-summary-87
+-	0	com.apple.SafariHistoryServiceAgent
+1507	0	application.com.raycast.macos.53335808.136783320
+-	78	com.example.failing-job
+-	-9	com.example.killed-by-signal
+21380	0	com.apple.dataaccess.dataaccessd
+-	0	com.example.launchpeek-demo
+garbage line that should be ignored
+1271	0	com.apple.FontWorker
