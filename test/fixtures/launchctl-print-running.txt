@@ -1,0 +1,29 @@
+gui/504/org.danimal141.herdr-server = {
+	active count = 1
+	path = /Users/hideaki.ishii/Library/LaunchAgents/org.danimal141.herdr-server.plist
+	type = LaunchAgent
+	state = running
+
+	program = /opt/homebrew/bin/herdr
+	arguments = {
+		/opt/homebrew/bin/herdr
+		server
+	}
+
+	domain = gui/504 [100017]
+	asid = 100017
+	minimum runtime = 10
+	exit timeout = 5
+	runs = 1
+	pid = 1477
+	immediate reason = speculative
+	forks = 181
+	execs = 1
+	initialized = 1
+	trampolined = 1
+	started suspended = 0
+	proxy started suspended = 0
+	last exit code = (never exited)
+
+	spawn type = daemon (3)
+}

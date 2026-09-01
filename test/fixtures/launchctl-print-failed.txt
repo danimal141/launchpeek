@@ -1,0 +1,12 @@
+gui/504/com.example.failing-job = {
+	active count = 0
+	path = /Users/hideaki.ishii/Library/LaunchAgents/com.example.failing-job.plist
+	type = LaunchAgent
+	state = not running
+
+	program = /usr/local/bin/flaky
+	unrecognized future field = some value
+
+	run count = 5
+	last exit code = 78
+}

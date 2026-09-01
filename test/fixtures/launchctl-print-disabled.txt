@@ -1,0 +1,7 @@
+	disabled services = {
+		"com.docker.helper" => enabled
+		"com.apple.ManagedClientAgent.enrollagent" => disabled
+		"org.danimal141.remap-caps-lock" => enabled
+		"com.apple.Siri.agent" => disabled
+		"com.apple.rcd" => disabled
+	}
