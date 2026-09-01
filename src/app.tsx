@@ -1,11 +1,20 @@
 import { Box, useApp, useInput, useStdout } from "ink";
 import { useEffect, useReducer } from "react";
-import { fetchList } from "./core/launchctl";
-import { jobFromListEntry } from "./core/merge";
+import {
+  fetchDisabledLabels,
+  fetchList,
+  fetchPrint,
+  type ListEntry,
+  type PrintInfo,
+} from "./core/launchctl";
+import { emptySources, mergeJobs, type RuntimeSources } from "./core/merge";
+import { loadDefinitions } from "./core/plist";
 import { initialState, reducer, visibleJobs } from "./state";
 import { Header } from "./ui/Header";
 import { JobList } from "./ui/JobList";
 import { StatusBar } from "./ui/StatusBar";
+
+const uid = process.getuid?.() ?? 0;
 
 export function App() {
   const { exit } = useApp();
@@ -14,26 +23,65 @@ export function App() {
 
   useEffect(() => {
     let cancelled = false;
+
+    const publish = (
+      definitions: Awaited<ReturnType<typeof loadDefinitions>>["definitions"],
+      sources: RuntimeSources,
+      warnings: string[],
+    ) => {
+      if (cancelled) return;
+      dispatch({
+        type: "jobs-updated",
+        jobs: mergeJobs(definitions, sources),
+        warnings,
+        at: new Date(),
+      });
+    };
+
     (async () => {
+      // 初回描画は plist 定義と launchctl list だけで行い (SPEC 非機能要件)、
+      // 遅い launchctl print の詳細は後から埋めて再描画する
+      const warnings: string[] = [];
+      const sources = emptySources();
+      let definitions: Awaited<
+        ReturnType<typeof loadDefinitions>
+      >["definitions"] = [];
       try {
-        const entries = await fetchList();
-        if (cancelled) return;
-        dispatch({
-          type: "jobs-updated",
-          jobs: entries.map(jobFromListEntry),
-          warnings: [],
-          at: new Date(),
-        });
+        const [loadResult, listEntries] = await Promise.all([
+          loadDefinitions(),
+          fetchList().catch((err): ListEntry[] => {
+            warnings.push(String(err));
+            return [];
+          }),
+        ]);
+        definitions = loadResult.definitions;
+        warnings.push(...loadResult.warnings);
+        sources.list = new Map(listEntries.map((e) => [e.label, e]));
       } catch (err) {
-        if (cancelled) return;
-        dispatch({
-          type: "jobs-updated",
-          jobs: [],
-          warnings: [String(err)],
-          at: new Date(),
-        });
+        warnings.push(String(err));
       }
+      publish(definitions, sources, warnings);
+
+      try {
+        const [disabledLabels, prints] = await Promise.all([
+          fetchDisabledLabels(uid),
+          Promise.all(
+            definitions.map(
+              async (def): Promise<[string, PrintInfo]> => [
+                def.label,
+                await fetchPrint(uid, def.label),
+              ],
+            ),
+          ),
+        ]);
+        sources.disabledLabels = disabledLabels;
+        sources.prints = new Map(prints);
+      } catch (err) {
+        warnings.push(String(err));
+      }
+      publish(definitions, sources, warnings);
     })();
+
     return () => {
       cancelled = true;
     };

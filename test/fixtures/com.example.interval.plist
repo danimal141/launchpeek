@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.example.interval</string>
+	<key>Program</key>
+	<string>/usr/local/bin/tick</string>
+	<key>StartInterval</key>
+	<integer>60</integer>
+	<key>KeepAlive</key>
+	<true/>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/tmp/tick.out.log</string>
+	<key>StandardErrorPath</key>
+	<string>/tmp/tick.err.log</string>
+	<key>WorkingDirectory</key>
+	<string>/tmp</string>
+</dict>
+</plist>

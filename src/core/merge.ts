@@ -1,5 +1,11 @@
-import type { Job, JobCategory, JobRuntime } from "../types";
-import type { ListEntry } from "./launchctl";
+import type {
+  Job,
+  JobCategory,
+  JobDefinition,
+  JobRuntime,
+  JobState,
+} from "../types";
+import type { ListEntry, PrintInfo } from "./launchctl";
 
 // category は SPEC の規則どおり上から順に評価し、最初に一致したものを採用する
 export function categorize(
@@ -15,27 +21,64 @@ export function categorize(
   return "idle";
 }
 
-// launchctl list の情報だけで表示する暫定 Job。
-// plist 定義と launchctl print の詳細は後続の取得で埋める
-export function jobFromListEntry(entry: ListEntry): Job {
-  const runtime: JobRuntime = {
-    label: entry.label,
-    // launchctl list に載っている時点で user ドメインにロード済み
-    loaded: true,
-    pid: entry.pid,
-    state: entry.pid !== undefined ? "running" : "unknown",
-    lastExitCode: entry.lastExitCode,
-    enabled: true,
-  };
+// launchctl print の state 表記 (running / not running / waiting 等) を
+// JobState に落とす。未知の表記は unknown にする
+function toJobState(
+  printState: string | undefined,
+  loaded: boolean,
+  enabled: boolean,
+  pid: number | undefined,
+): JobState {
+  if (!loaded) return enabled ? "not-loaded" : "disabled";
+  if (printState === "running") return "running";
+  if (printState === "waiting") return "waiting";
+  if (pid !== undefined) return "running";
+  return "unknown";
+}
+
+export interface RuntimeSources {
+  list: Map<string, ListEntry>;
+  prints: Map<string, PrintInfo>;
+  disabledLabels: Set<string>;
+}
+
+export function emptySources(): RuntimeSources {
+  return { list: new Map(), prints: new Map(), disabledLabels: new Set() };
+}
+
+export function buildRuntime(
+  label: string,
+  sources: RuntimeSources,
+): JobRuntime {
+  const listEntry = sources.list.get(label);
+  const print = sources.prints.get(label);
+  const enabled = !sources.disabledLabels.has(label);
+  // print が未取得 (初回描画) の間は launchctl list に載っていればロード済みとみなす
+  const loaded = print?.loaded ?? listEntry !== undefined;
+  const pid = print?.pid ?? listEntry?.pid;
   return {
-    label: entry.label,
-    plistPath: "",
-    domain: "user",
-    arguments: [],
-    keepAlive: false,
-    runAtLoad: false,
-    raw: {},
-    runtime,
-    category: categorize(runtime, undefined),
+    label,
+    loaded,
+    pid,
+    state: toJobState(print?.state, loaded, enabled, pid),
+    lastExitCode: print?.lastExitCode ?? listEntry?.lastExitCode,
+    runCount: print?.runCount,
+    enabled,
   };
+}
+
+// plist 定義に launchctl の状態を Label でマージする。
+// launchctl list には LaunchAgents 以外の大量のジョブ (XPC サービス等) も載るが、
+// SPEC のスコープは両 LaunchAgents ディレクトリの plist なので定義側を正とする
+export function mergeJobs(
+  definitions: JobDefinition[],
+  sources: RuntimeSources,
+): Job[] {
+  return definitions
+    .map((def) => {
+      const runtime = buildRuntime(def.label, sources);
+      const nextRun = undefined;
+      return { ...def, runtime, nextRun, category: categorize(runtime, nextRun) };
+    })
+    .sort((a, b) => a.label.localeCompare(b.label));
 }

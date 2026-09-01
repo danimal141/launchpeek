@@ -1,0 +1,23 @@
+gui/504/org.danimal141.weekly-summary-87 = {
+	active count = 0
+	path = /Users/hideaki.ishii/Library/LaunchAgents/org.danimal141.weekly-summary-87.plist
+	type = LaunchAgent
+	state = not running
+
+	program = /bin/bash
+	arguments = {
+		/bin/bash
+		-c
+		/Users/hideaki.ishii/scripts/run-weekly-summary.sh 87
+	}
+
+	stdout path = /Users/hideaki.ishii/Library/Logs/weekly-summary-87.out.log
+	stderr path = /Users/hideaki.ishii/Library/Logs/weekly-summary-87.err.log
+
+	domain = gui/504 [100017]
+	asid = 100017
+	minimum runtime = 10
+	exit timeout = 5
+	runs = 0
+	last exit code = (never exited)
+}
