@@ -92,9 +92,36 @@ describe("mergeJobs", () => {
     sources.list.set("b.job", { label: "b.job", pid: 42 });
     // list にしか無いジョブ (LaunchAgents 外の XPC サービス等) は含まれない
     sources.list.set("zz.not-mine", { label: "zz.not-mine" });
-    const jobs = mergeJobs([definition("b.job"), definition("a.job")], sources);
+    const jobs = mergeJobs(
+      [definition("b.job"), definition("a.job")],
+      sources,
+      new Date(),
+    );
     expect(jobs.map((j) => j.label)).toEqual(["a.job", "b.job"]);
     expect(jobs[1]?.category).toBe("busy");
     expect(jobs[0]?.category).toBe("disabled"); // 未ロードなので
+  });
+
+  test("ロード済みでスケジュールがあれば nextRun 付きで scheduled になる", () => {
+    const sources = emptySources();
+    sources.list.set("cal.job", { label: "cal.job", lastExitCode: 0 });
+    const def: JobDefinition = {
+      ...definition("cal.job"),
+      startCalendarInterval: [{ hour: 9, minute: 0 }],
+    };
+    const now = new Date(2026, 8, 1, 8, 0); // 2026-09-01 08:00
+    const jobs = mergeJobs([def], sources, now);
+    expect(jobs[0]?.category).toBe("scheduled");
+    expect(jobs[0]?.nextRun).toEqual(new Date(2026, 8, 1, 9, 0));
+  });
+
+  test("未ロードのジョブには nextRun を出さない", () => {
+    const def: JobDefinition = {
+      ...definition("cal.job"),
+      startInterval: 60,
+    };
+    const jobs = mergeJobs([def], emptySources(), new Date());
+    expect(jobs[0]?.nextRun).toBeUndefined();
+    expect(jobs[0]?.category).toBe("disabled");
   });
 });
