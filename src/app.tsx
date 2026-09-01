@@ -17,6 +17,7 @@ import {
 } from "./core/logs";
 import { emptySources, mergeJobs } from "./core/merge";
 import { loadDefinitions } from "./core/plist";
+import { watchAgentDirs } from "./core/watcher";
 import { initialState, reducer, selectedJob, visibleJobs } from "./state";
 import type { ActionKind, Job } from "./types";
 import { FilterInput } from "./ui/FilterInput";
@@ -49,7 +50,6 @@ export function App() {
   const refresh = useCallback(async () => {
     if (refreshing.current) return;
     refreshing.current = true;
-    dispatch({ type: "set-loading", loading: true });
     try {
       // 初回描画は plist 定義と launchctl list だけで行い (SPEC 非機能要件)、
       // 遅い launchctl print の詳細は後から埋めて再描画する
@@ -109,6 +109,14 @@ export function App() {
 
   useEffect(() => {
     void refresh();
+    // 一覧は 3 秒間隔でポーリングし、plist の変更検知時は即時再取得する (SPEC)。
+    // 再取得中も前回の jobs を表示したまま操作できる
+    const timer = setInterval(() => void refresh(), 3000);
+    const stopWatching = watchAgentDirs(() => void refresh());
+    return () => {
+      clearInterval(timer);
+      stopWatching();
+    };
   }, [refresh]);
 
   // アクション結果のメッセージは 3 秒で消す (SPEC)
