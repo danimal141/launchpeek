@@ -15,6 +15,8 @@ interface Props {
   selectedIndex: number;
   height: number;
   width: number;
+  // detail モードで左に縮小表示するとき true。category と label だけ出す
+  compact?: boolean;
 }
 
 const CATEGORY_W = 10;
@@ -23,10 +25,12 @@ const EXIT_W = 5;
 const NEXT_RUN_W = 12;
 const SCHEDULE_W = 20;
 
-export function JobList({ jobs, selectedIndex, height, width }: Props) {
+export function JobList({ jobs, selectedIndex, height, width, compact }: Props) {
   // 既定の判断: 端末幅 80 未満では next run と schedule の列を省く
-  const wide = width >= 80;
-  const fixed = CATEGORY_W + PID_W + EXIT_W + (wide ? NEXT_RUN_W + SCHEDULE_W : 0);
+  const wide = !compact && width >= 80;
+  const fixed = compact
+    ? CATEGORY_W
+    : CATEGORY_W + PID_W + EXIT_W + (wide ? NEXT_RUN_W + SCHEDULE_W : 0);
   const labelWidth = Math.max(10, width - fixed - 5);
 
   // 選択行が常に見えるようにスクロール位置を決める
@@ -40,8 +44,10 @@ export function JobList({ jobs, selectedIndex, height, width }: Props) {
   return (
     <Box flexDirection="column" height={height}>
       <Text dimColor>
-        {truncatePad("CATEGORY", CATEGORY_W)} {truncatePad("LABEL", labelWidth)}{" "}
-        {truncatePad("PID", PID_W)} {truncatePad("EXIT", EXIT_W)}
+        {truncatePad("CATEGORY", CATEGORY_W)} {truncatePad("LABEL", labelWidth)}
+        {compact
+          ? ""
+          : ` ${truncatePad("PID", PID_W)} ${truncatePad("EXIT", EXIT_W)}`}
         {wide
           ? ` ${truncatePad("NEXT RUN", NEXT_RUN_W)} ${truncatePad("SCHEDULE", SCHEDULE_W)}`
           : ""}
@@ -54,9 +60,13 @@ export function JobList({ jobs, selectedIndex, height, width }: Props) {
           const cells = [
             truncatePad(job.category, CATEGORY_W),
             truncatePad(job.label, labelWidth),
-            truncatePad(job.runtime.pid?.toString() ?? "-", PID_W),
-            truncatePad(job.runtime.lastExitCode?.toString() ?? "-", EXIT_W),
           ];
+          if (!compact) {
+            cells.push(
+              truncatePad(job.runtime.pid?.toString() ?? "-", PID_W),
+              truncatePad(job.runtime.lastExitCode?.toString() ?? "-", EXIT_W),
+            );
+          }
           if (wide) {
             cells.push(
               truncatePad(job.nextRun ? formatTime(job.nextRun) : "-", NEXT_RUN_W),

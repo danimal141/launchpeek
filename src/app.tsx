@@ -9,8 +9,9 @@ import {
 } from "./core/launchctl";
 import { emptySources, mergeJobs, type RuntimeSources } from "./core/merge";
 import { loadDefinitions } from "./core/plist";
-import { initialState, reducer, visibleJobs } from "./state";
+import { initialState, reducer, selectedJob, visibleJobs } from "./state";
 import { Header } from "./ui/Header";
+import { JobDetail } from "./ui/JobDetail";
 import { JobList } from "./ui/JobList";
 import { StatusBar } from "./ui/StatusBar";
 
@@ -90,7 +91,12 @@ export function App() {
 
   useInput((input, key) => {
     if (input === "q" || key.escape) {
-      exit();
+      // 一つ前のモードへ戻る。list で押した場合は終了 (SPEC)
+      if (state.mode === "list") {
+        exit();
+      } else {
+        dispatch({ type: "set-mode", mode: "list" });
+      }
       return;
     }
     if (input === "j" || key.downArrow) {
@@ -101,6 +107,8 @@ export function App() {
       dispatch({ type: "select-first" });
     } else if (input === "G") {
       dispatch({ type: "select-last" });
+    } else if (key.return && state.mode === "list") {
+      dispatch({ type: "set-mode", mode: "detail" });
     }
   });
 
@@ -108,6 +116,8 @@ export function App() {
   const width = stdout.columns || 80;
   const height = stdout.rows || 24;
   const listHeight = Math.max(3, height - 2);
+  // detail モードでは左 4 割を縮小 JobList に使う
+  const listWidth = Math.max(24, Math.floor(width * 0.4));
   const visible = visibleJobs(state);
 
   return (
@@ -119,12 +129,27 @@ export function App() {
         lastUpdated={state.lastUpdated}
         loading={state.loading}
       />
-      <JobList
-        jobs={visible}
-        selectedIndex={state.selectedIndex}
-        height={listHeight}
-        width={width}
-      />
+      {state.mode === "detail" ? (
+        <Box height={listHeight}>
+          <Box width={listWidth} flexShrink={0}>
+            <JobList
+              jobs={visible}
+              selectedIndex={state.selectedIndex}
+              height={listHeight}
+              width={listWidth}
+              compact
+            />
+          </Box>
+          <JobDetail job={selectedJob(state)} height={listHeight} />
+        </Box>
+      ) : (
+        <JobList
+          jobs={visible}
+          selectedIndex={state.selectedIndex}
+          height={listHeight}
+          width={width}
+        />
+      )}
       <StatusBar
         mode={state.mode}
         message={state.message}

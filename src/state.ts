@@ -31,7 +31,8 @@ export type Action =
   | { type: "jobs-updated"; jobs: Job[]; warnings: string[]; at: Date }
   | { type: "move-selection"; delta: number }
   | { type: "select-first" }
-  | { type: "select-last" };
+  | { type: "select-last" }
+  | { type: "set-mode"; mode: Mode };
 
 export function visibleJobs(state: AppState): Job[] {
   if (state.filter === "") return state.jobs;
@@ -78,6 +79,8 @@ export function reducer(state: AppState, action: Action): AppState {
         ),
       };
     }
+    case "set-mode":
+      return { ...state, mode: action.mode };
     case "select-first":
       return { ...state, selectedIndex: 0 };
     case "select-last": {
