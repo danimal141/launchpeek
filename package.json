@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "bun run src/index.tsx",
-    "build": "bun build --compile src/index.tsx --outfile launchpeek",
+    "build": "bun run scripts/build.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
