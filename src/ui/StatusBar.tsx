@@ -2,7 +2,7 @@ import { Text } from "ink";
 import type { Mode } from "../state";
 
 const MODE_KEYS: Record<Mode, string> = {
-  list: "j/k:move  g/G:top/bottom  q:quit",
+  list: "j/k:move  g/G:top/bottom  Enter:detail  q:quit",
   detail: "j/k:move  q/Esc:back",
   logs: "q/Esc:back",
 };
