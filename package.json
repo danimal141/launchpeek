@@ -1,0 +1,22 @@
+{
+  "name": "launchpeek",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.tsx",
+    "build": "bun build --compile src/index.tsx --outfile launchpeek",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ink": "^7.1.1",
+    "plist": "^5.0.0",
+    "react": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.0",
+    "@types/plist": "^3.0.5",
+    "@types/react": "^19.2.18",
+    "typescript": "^5.9.0"
+  }
+}
