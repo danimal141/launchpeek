@@ -262,9 +262,9 @@ export function App() {
       dispatch({ type: "open-logs" });
       return;
     }
-    if (input === "j" || key.downArrow) {
+    if (input === "j" || key.downArrow || (key.ctrl && input === "n")) {
       dispatch({ type: "move-selection", delta: 1 });
-    } else if (input === "k" || key.upArrow) {
+    } else if (input === "k" || key.upArrow || (key.ctrl && input === "p")) {
       dispatch({ type: "move-selection", delta: -1 });
     } else if (input === "g") {
       dispatch({ type: "select-first" });

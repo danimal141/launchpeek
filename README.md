@@ -30,7 +30,7 @@ category の色: busy=green / failed=red / disabled=gray / scheduled=cyan / idle
 
 | キー | 動作 |
 | --- | --- |
-| `j` / `k`, 矢印 | 上下移動 |
+| `j` / `k`, 矢印, `Ctrl+N` / `Ctrl+P` | 上下移動 |
 | `g` / `G` | 先頭 / 末尾 |
 | `Enter` | detail を開く |
 | `l` | logs を開く |
