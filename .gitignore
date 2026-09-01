@@ -1,0 +1,4 @@
+node_modules/
+launchpeek
+*.log
+.DS_Store

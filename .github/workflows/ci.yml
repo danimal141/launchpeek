@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    # テストは fixtures ベースの純粋関数のみを対象とするため、
+    # private repo で消費倍率の高い macOS ランナーは使わない
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+        if: hashFiles('bun.lock') != ''
+      - run: bunx tsc --noEmit
+        if: hashFiles('tsconfig.json') != ''
+      - run: bun test
+        if: hashFiles('bun.lock') != ''
