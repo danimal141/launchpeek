@@ -30,11 +30,12 @@ export function App() {
       warnings: string[],
     ) => {
       if (cancelled) return;
+      const now = new Date();
       dispatch({
         type: "jobs-updated",
-        jobs: mergeJobs(definitions, sources),
+        jobs: mergeJobs(definitions, sources, now),
         warnings,
-        at: new Date(),
+        at: now,
       });
     };
 

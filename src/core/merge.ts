@@ -6,6 +6,7 @@ import type {
   JobState,
 } from "../types";
 import type { ListEntry, PrintInfo } from "./launchctl";
+import { nextRun } from "./schedule";
 
 // category は SPEC の規則どおり上から順に評価し、最初に一致したものを採用する
 export function categorize(
@@ -73,12 +74,15 @@ export function buildRuntime(
 export function mergeJobs(
   definitions: JobDefinition[],
   sources: RuntimeSources,
+  now: Date,
 ): Job[] {
   return definitions
     .map((def) => {
       const runtime = buildRuntime(def.label, sources);
-      const nextRun = undefined;
-      return { ...def, runtime, nextRun, category: categorize(runtime, nextRun) };
+      // 未ロード / 無効のジョブは launchd に予定が無いので nextRun を出さない
+      const run =
+        runtime.loaded && runtime.enabled ? nextRun(def, now) : undefined;
+      return { ...def, runtime, nextRun: run, category: categorize(runtime, run) };
     })
     .sort((a, b) => a.label.localeCompare(b.label));
 }
