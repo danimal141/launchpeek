@@ -48,8 +48,7 @@ export type Action =
   // 編集は reducer 内で完結する相対操作にする
   | { type: "filter-append"; char: string }
   | { type: "filter-backspace" }
-  | { type: "filter-clear" }
-  | { type: "set-loading"; loading: boolean };
+  | { type: "filter-clear" };
 
 export function visibleJobs(state: AppState): Job[] {
   if (state.filter === "") return state.jobs;
@@ -136,8 +135,6 @@ export function reducer(state: AppState, action: Action): AppState {
       return withFilter(state, state.filter.slice(0, -1));
     case "filter-clear":
       return withFilter(state, "");
-    case "set-loading":
-      return { ...state, loading: action.loading };
     case "select-first":
       return { ...state, selectedIndex: 0 };
     case "select-last": {
