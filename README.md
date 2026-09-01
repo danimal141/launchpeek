@@ -2,7 +2,7 @@
 
 macOS の launchd ジョブ (LaunchAgents) を Sidekiq の管理画面のように一覧・詳細・ログ確認し、その場で kickstart / enable / disable などの操作ができるターミナルアプリ。
 
-仕様の正は [SPEC.md](./SPEC.md)。
+仕様の正は [SPEC.md](./SPEC.md)。設計判断とその理由は [docs/design/architecture.md](./docs/design/architecture.md) にまとめている。
 
 ## 起動方法
 
