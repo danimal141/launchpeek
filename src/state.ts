@@ -38,7 +38,18 @@ export type Action =
   | { type: "set-mode"; mode: Mode }
   | { type: "open-logs" }
   | { type: "close-logs" }
-  | { type: "log-lines"; lines: string[] };
+  | { type: "log-lines"; lines: string[] }
+  | { type: "set-message"; message: string }
+  | { type: "clear-message" }
+  | { type: "confirm-request"; kind: ActionKind; job: Job }
+  | { type: "confirm-clear" }
+  | { type: "filter-editing"; editing: boolean }
+  // 複数キーが 1 チャンクで届いたとき stale な filter 値で上書きしないよう、
+  // 編集は reducer 内で完結する相対操作にする
+  | { type: "filter-append"; char: string }
+  | { type: "filter-backspace" }
+  | { type: "filter-clear" }
+  | { type: "set-loading"; loading: boolean };
 
 export function visibleJobs(state: AppState): Job[] {
   if (state.filter === "") return state.jobs;
@@ -48,6 +59,16 @@ export function visibleJobs(state: AppState): Job[] {
 
 export function selectedJob(state: AppState): Job | undefined {
   return visibleJobs(state)[state.selectedIndex];
+}
+
+// フィルタで表示が変わっても選択中の label を追従させる
+function withFilter(state: AppState, filter: string): AppState {
+  const prevLabel = selectedJob(state)?.label;
+  const next: AppState = { ...state, filter };
+  const visible = visibleJobs(next);
+  const followed = visible.findIndex((job) => job.label === prevLabel);
+  next.selectedIndex = followed >= 0 ? followed : 0;
+  return next;
 }
 
 function clampIndex(index: number, length: number): number {
@@ -99,6 +120,24 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, mode: state.logsReturnMode, logLines: [] };
     case "log-lines":
       return { ...state, logLines: action.lines };
+    case "set-message":
+      return { ...state, message: action.message };
+    case "clear-message":
+      return { ...state, message: undefined };
+    case "confirm-request":
+      return { ...state, pendingConfirm: { kind: action.kind, job: action.job } };
+    case "confirm-clear":
+      return { ...state, pendingConfirm: undefined };
+    case "filter-editing":
+      return { ...state, filterEditing: action.editing };
+    case "filter-append":
+      return withFilter(state, state.filter + action.char);
+    case "filter-backspace":
+      return withFilter(state, state.filter.slice(0, -1));
+    case "filter-clear":
+      return withFilter(state, "");
+    case "set-loading":
+      return { ...state, loading: action.loading };
     case "select-first":
       return { ...state, selectedIndex: 0 };
     case "select-last": {

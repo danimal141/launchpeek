@@ -1,5 +1,6 @@
 import { Box, useApp, useInput, useStdout } from "ink";
-import { useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
+import { runAction } from "./core/actions";
 import {
   fetchDisabledLabels,
   fetchList,
@@ -14,9 +15,11 @@ import {
   tailFile,
   type LogFileTail,
 } from "./core/logs";
-import { emptySources, mergeJobs, type RuntimeSources } from "./core/merge";
+import { emptySources, mergeJobs } from "./core/merge";
 import { loadDefinitions } from "./core/plist";
 import { initialState, reducer, selectedJob, visibleJobs } from "./state";
+import type { ActionKind, Job } from "./types";
+import { FilterInput } from "./ui/FilterInput";
 import { Header } from "./ui/Header";
 import { JobDetail } from "./ui/JobDetail";
 import { JobList } from "./ui/JobList";
@@ -25,30 +28,29 @@ import { StatusBar } from "./ui/StatusBar";
 
 const uid = process.getuid?.() ?? 0;
 
+// bootout / kill は取り消しが利かないので実行前に y の確認を挟む (SPEC)
+const CONFIRM_ACTIONS: ReadonlySet<ActionKind> = new Set(["bootout", "kill"]);
+
+const ACTION_KEYS: Record<string, ActionKind> = {
+  r: "kickstart",
+  e: "enable",
+  d: "disable",
+  u: "bootout",
+  U: "bootstrap",
+  x: "kill",
+};
+
 export function App() {
   const { exit } = useApp();
   const { stdout } = useStdout();
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const publish = (
-      definitions: Awaited<ReturnType<typeof loadDefinitions>>["definitions"],
-      sources: RuntimeSources,
-      warnings: string[],
-    ) => {
-      if (cancelled) return;
-      const now = new Date();
-      dispatch({
-        type: "jobs-updated",
-        jobs: mergeJobs(definitions, sources, now),
-        warnings,
-        at: now,
-      });
-    };
-
-    (async () => {
+  const refreshing = useRef(false);
+  const refresh = useCallback(async () => {
+    if (refreshing.current) return;
+    refreshing.current = true;
+    dispatch({ type: "set-loading", loading: true });
+    try {
       // 初回描画は plist 定義と launchctl list だけで行い (SPEC 非機能要件)、
       // 遅い launchctl print の詳細は後から埋めて再描画する
       const warnings: string[] = [];
@@ -70,7 +72,12 @@ export function App() {
       } catch (err) {
         warnings.push(String(err));
       }
-      publish(definitions, sources, warnings);
+      dispatch({
+        type: "jobs-updated",
+        jobs: mergeJobs(definitions, sources, new Date()),
+        warnings,
+        at: new Date(),
+      });
 
       try {
         const [disabledLabels, prints] = await Promise.all([
@@ -89,13 +96,43 @@ export function App() {
       } catch (err) {
         warnings.push(String(err));
       }
-      publish(definitions, sources, warnings);
-    })();
-
-    return () => {
-      cancelled = true;
-    };
+      dispatch({
+        type: "jobs-updated",
+        jobs: mergeJobs(definitions, sources, new Date()),
+        warnings,
+        at: new Date(),
+      });
+    } finally {
+      refreshing.current = false;
+    }
   }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  // アクション結果のメッセージは 3 秒で消す (SPEC)
+  const messageTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const showMessage = useCallback((message: string) => {
+    dispatch({ type: "set-message", message });
+    if (messageTimer.current !== undefined) clearTimeout(messageTimer.current);
+    messageTimer.current = setTimeout(
+      () => dispatch({ type: "clear-message" }),
+      3000,
+    );
+  }, []);
+
+  const executeAction = useCallback(
+    async (kind: ActionKind, job: Job) => {
+      const result = await runAction(kind, job);
+      showMessage(result.message);
+      // 実行後は必ず状態を再取得する (SPEC)
+      void refresh();
+    },
+    [refresh, showMessage],
+  );
 
   // logs ポーリングの effect が最新の jobs を stale closure なしで引けるようにする
   const jobsRef = useRef(state.jobs);
@@ -147,13 +184,45 @@ export function App() {
     for (const input of inputs) handleKey(input, key);
   });
 
-  function handleKey(input: string, key: Parameters<Parameters<typeof useInput>[0]>[1]) {
+  function handleKey(
+    input: string,
+    key: Parameters<Parameters<typeof useInput>[0]>[1],
+  ) {
+    // 確認待ち中は y で実行、n / Esc / q で取り消し。他のキーは無視する
+    if (state.pendingConfirm !== undefined) {
+      const { kind, job } = state.pendingConfirm;
+      if (input === "y") {
+        dispatch({ type: "confirm-clear" });
+        void executeAction(kind, job);
+      } else if (input === "n" || input === "q" || key.escape) {
+        dispatch({ type: "confirm-clear" });
+      }
+      return;
+    }
+
+    // フィルタ編集中は文字入力として扱う
+    if (state.filterEditing) {
+      if (key.escape) {
+        dispatch({ type: "filter-clear" });
+        dispatch({ type: "filter-editing", editing: false });
+      } else if (key.return) {
+        dispatch({ type: "filter-editing", editing: false });
+      } else if (key.backspace || key.delete) {
+        dispatch({ type: "filter-backspace" });
+      } else if (input.length === 1 && !key.ctrl && !key.meta) {
+        dispatch({ type: "filter-append", char: input });
+      }
+      return;
+    }
+
     if (input === "q" || key.escape) {
-      // 一つ前のモードへ戻る。list で押した場合は終了 (SPEC)
       if (state.mode === "logs") {
         dispatch({ type: "close-logs" });
       } else if (state.mode === "detail") {
         dispatch({ type: "set-mode", mode: "list" });
+      } else if (key.escape && state.filter !== "") {
+        // list で Esc: フィルタが掛かっていれば解除する (SPEC)
+        dispatch({ type: "filter-clear" });
       } else {
         exit();
       }
@@ -161,6 +230,26 @@ export function App() {
     }
     // logs は全画面表示なので閲覧キー以外は受け付けない
     if (state.mode === "logs") return;
+
+    if (input === "/") {
+      dispatch({ type: "filter-editing", editing: true });
+      return;
+    }
+    if (input === "R") {
+      void refresh();
+      return;
+    }
+    const actionKind = ACTION_KEYS[input];
+    if (actionKind !== undefined) {
+      const job = selectedJob(state);
+      if (!job) return;
+      if (CONFIRM_ACTIONS.has(actionKind)) {
+        dispatch({ type: "confirm-request", kind: actionKind, job });
+      } else {
+        void executeAction(actionKind, job);
+      }
+      return;
+    }
     if (input === "l") {
       dispatch({ type: "open-logs" });
       return;
@@ -186,6 +275,22 @@ export function App() {
   const listWidth = Math.max(24, Math.floor(width * 0.4));
   const visible = visibleJobs(state);
 
+  const confirmPrompt =
+    state.pendingConfirm !== undefined
+      ? `${state.pendingConfirm.kind} ${state.pendingConfirm.job.label}? (y/n)`
+      : undefined;
+
+  const statusLine = state.filterEditing ? (
+    <FilterInput value={state.filter} />
+  ) : (
+    <StatusBar
+      mode={state.mode}
+      message={state.message}
+      confirmPrompt={confirmPrompt}
+      warnings={state.warnings}
+    />
+  );
+
   if (state.mode === "logs") {
     // 全画面で LogTail。上部 1 行に label とファイルパス (SPEC)
     return (
@@ -195,11 +300,7 @@ export function App() {
           lines={state.logLines}
           height={height - 1}
         />
-        <StatusBar
-          mode={state.mode}
-          message={state.message}
-          warnings={state.warnings}
-        />
+        {statusLine}
       </Box>
     );
   }
@@ -234,11 +335,7 @@ export function App() {
           width={width}
         />
       )}
-      <StatusBar
-        mode={state.mode}
-        message={state.message}
-        warnings={state.warnings}
-      />
+      {statusLine}
     </Box>
   );
 }
