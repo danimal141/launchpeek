@@ -31,7 +31,16 @@ export function JobList({ jobs, selectedIndex, height, width, compact }: Props) 
   const fixed = compact
     ? CATEGORY_W
     : CATEGORY_W + PID_W + EXIT_W + (wide ? NEXT_RUN_W + SCHEDULE_W : 0);
-  const labelWidth = Math.max(10, width - fixed - 5);
+  // label 列は余白いっぱいに広げず最長 label でキャップする。
+  // 広い画面で右側の列だけが画面右端へ離れて読みにくくなるのを防ぐ
+  const longestLabel = jobs.reduce(
+    (max, job) => Math.max(max, job.label.length),
+    "LABEL".length,
+  );
+  const labelWidth = Math.max(
+    10,
+    Math.min(width - fixed - 5, longestLabel),
+  );
 
   // 選択行が常に見えるようにスクロール位置を決める
   const rowCount = Math.max(1, height - 1);
