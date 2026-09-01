@@ -14,6 +14,8 @@ export interface AppState {
   logLines: string[];
   lastUpdated?: Date;
   loading: boolean;
+  // logs モードは list と detail の両方から入れるため、戻り先を覚えておく
+  logsReturnMode: "list" | "detail";
 }
 
 export const initialState: AppState = {
@@ -25,6 +27,7 @@ export const initialState: AppState = {
   filterEditing: false,
   logLines: [],
   loading: true,
+  logsReturnMode: "list",
 };
 
 export type Action =
@@ -32,7 +35,10 @@ export type Action =
   | { type: "move-selection"; delta: number }
   | { type: "select-first" }
   | { type: "select-last" }
-  | { type: "set-mode"; mode: Mode };
+  | { type: "set-mode"; mode: Mode }
+  | { type: "open-logs" }
+  | { type: "close-logs" }
+  | { type: "log-lines"; lines: string[] };
 
 export function visibleJobs(state: AppState): Job[] {
   if (state.filter === "") return state.jobs;
@@ -81,6 +87,18 @@ export function reducer(state: AppState, action: Action): AppState {
     }
     case "set-mode":
       return { ...state, mode: action.mode };
+    case "open-logs":
+      if (state.mode === "logs") return state;
+      return {
+        ...state,
+        mode: "logs",
+        logsReturnMode: state.mode,
+        logLines: [],
+      };
+    case "close-logs":
+      return { ...state, mode: state.logsReturnMode, logLines: [] };
+    case "log-lines":
+      return { ...state, logLines: action.lines };
     case "select-first":
       return { ...state, selectedIndex: 0 };
     case "select-last": {
