@@ -34,6 +34,7 @@ category の色: busy=green / failed=red / disabled=gray / scheduled=cyan / idle
 | `g` / `G` | 先頭 / 末尾 |
 | `Enter` | detail を開く |
 | `l` | logs を開く |
+| `c` / `y` | 選択中のジョブの label をクリップボードへコピー |
 | `r` | kickstart (`launchctl kickstart -k`) |
 | `e` / `d` | enable / disable |
 | `u` | bootout (y/n 確認あり) |

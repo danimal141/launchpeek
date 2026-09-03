@@ -267,6 +267,7 @@ logs
 * `g` / `G`: 先頭 / 末尾
 * `Enter`: detail を開く
 * `l`: logs を開く
+* `c` / `y`: 選択中のジョブの label をクリップボードへコピー
 * `r`: kickstart
 * `e`: enable
 * `d`: disable

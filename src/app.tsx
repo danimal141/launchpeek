@@ -1,6 +1,7 @@
 import { Box, useApp, useInput, useStdout } from "ink";
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { runAction } from "./core/actions";
+import { copyLabel } from "./core/clipboard";
 import {
   fetchDisabledLabels,
   fetchList,
@@ -245,6 +246,13 @@ export function App() {
     }
     if (input === "R") {
       void refresh();
+      return;
+    }
+    if (input === "c" || input === "y") {
+      const job = selectedJob(state);
+      if (job) {
+        void copyLabel(job.label).then((result) => showMessage(result.message));
+      }
       return;
     }
     const actionKind = ACTION_KEYS[input];
