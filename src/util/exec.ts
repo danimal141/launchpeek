@@ -33,10 +33,17 @@ function release(): void {
 export async function exec(
   cmd: string[],
   timeoutMs = DEFAULT_TIMEOUT_MS,
+  stdin?: string,
 ): Promise<ExecResult> {
   await acquire();
   try {
-    const proc = Bun.spawn({ cmd, stdout: "pipe", stderr: "pipe" });
+    const proc = Bun.spawn({
+      cmd,
+      stdin:
+        stdin === undefined ? "ignore" : new TextEncoder().encode(stdin),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
     const timer = setTimeout(() => proc.kill(), timeoutMs);
     try {
       const [stdout, stderr, exitCode] = await Promise.all([
