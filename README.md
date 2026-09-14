@@ -14,7 +14,13 @@ bun start            # = bun run src/index.tsx
 # 単一バイナリ
 bun run build        # = bun run scripts/build.ts → ./launchpeek
 ./launchpeek
+
+# どこからでも起動できるようにする (PATH 上のディレクトリにリンクする)
+ln -s "$PWD/launchpeek" ~/.local/bin/launchpeek
+launchpeek
 ```
+
+リンク先はリポジトリ内のバイナリなので、`bun run build` で再ビルドすればそのまま反映される。
 
 前提: macOS 13 以降、Bun インストール済み。user ドメイン (`gui/<uid>`) のみを扱い、sudo は不要。
 
