@@ -248,7 +248,7 @@ export function App() {
       void refresh();
       return;
     }
-    if (input === "c" || input === "y") {
+    if (input === "y") {
       const job = selectedJob(state);
       if (job) {
         void copyLabel(job.label).then((result) => showMessage(result.message));
