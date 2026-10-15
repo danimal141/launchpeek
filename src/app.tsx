@@ -16,6 +16,7 @@ import {
   tailFile,
   type LogFileTail,
 } from "./core/logs";
+import { extraLogPathsFor, loadConfig } from "./core/config";
 import { emptySources, mergeJobs } from "./core/merge";
 import { loadDefinitions } from "./core/plist";
 import { watchAgentDirs } from "./core/watcher";
@@ -56,6 +57,7 @@ export function App() {
       // 遅い launchctl print の詳細は後から埋めて再描画する
       const warnings: string[] = [];
       const sources = emptySources();
+      const configPromise = loadConfig();
       let definitions: Awaited<
         ReturnType<typeof loadDefinitions>
       >["definitions"] = [];
@@ -73,6 +75,8 @@ export function App() {
       } catch (err) {
         warnings.push(String(err));
       }
+      const configResult = await configPromise;
+      dispatch({ type: "config-updated", config: configResult.config, warnings: configResult.warnings });
       dispatch({
         type: "jobs-updated",
         jobs: mergeJobs(definitions, sources, new Date()),
@@ -147,6 +151,14 @@ export function App() {
   const jobsRef = useRef(state.jobs);
   jobsRef.current = state.jobs;
   const selectedLabel = selectedJob(state)?.label;
+  const configuredPaths = selectedLabel ? extraLogPathsFor(state.config, selectedLabel) : [];
+  const logJob = selectedJob(state);
+  const extraPaths = logJob ? logSourcesOf(logJob, configuredPaths)
+    .filter((source) => source.kind !== "out" && source.kind !== "err")
+    .map((source) => source.path) : [];
+  const extraPathsRef = useRef(extraPaths);
+  extraPathsRef.current = extraPaths;
+  const extraPathsKey = extraPaths.join("\u0000");
 
   useEffect(() => {
     if (state.mode !== "logs") return;
@@ -163,7 +175,7 @@ export function App() {
 
     (async () => {
       tails = await Promise.all(
-        logSourcesOf(job).map((s) => tailFile(s.kind, s.path)),
+        logSourcesOf(job, extraPathsRef.current).map((s) => tailFile(s.kind, s.path)),
       );
       publish();
     })();
@@ -185,7 +197,7 @@ export function App() {
       stopped = true;
       clearInterval(timer);
     };
-  }, [state.mode, selectedLabel]);
+  }, [state.mode, selectedLabel, extraPathsKey]);
 
   // 高速連打やペーストでは複数キーが 1 チャンクで届くため、1 文字ずつ処理する
   useInput((chunk, key) => {
@@ -303,7 +315,7 @@ export function App() {
       mode={state.mode}
       message={state.message}
       confirmPrompt={confirmPrompt}
-      warnings={state.warnings}
+      warnings={[...state.warnings, ...state.configWarnings]}
     />
   );
 
@@ -313,6 +325,8 @@ export function App() {
       <Box flexDirection="column" width={width}>
         <LogTail
           job={selectedJob(state)}
+          extraPaths={extraPaths}
+          warnings={state.configWarnings}
           lines={state.logLines}
           height={height - 1}
         />
@@ -341,7 +355,7 @@ export function App() {
               compact
             />
           </Box>
-          <JobDetail job={selectedJob(state)} height={listHeight} />
+          <JobDetail job={selectedJob(state)} height={listHeight} extraPaths={extraPaths} />
         </Box>
       ) : (
         <JobList

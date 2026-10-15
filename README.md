@@ -92,3 +92,21 @@ CI (GitHub Actions) が PR / push で両方を実行する。
 - [x] plist を追加すると数秒で一覧に現れ、削除すると消える。選択中のジョブは label で追従する
 - [x] `u` で y/n 確認が出て、n でキャンセル、y で bootout。`U` で bootstrap し直せる
 - [x] `./launchpeek` (単一バイナリ) が起動して一覧が表示される
+
+## 追加ログファイル
+
+plist の stdout / stderr とは別のファイルへログを書くジョブは、任意の
+`~/.config/launchpeek/config.json` で表示対象を追加できる。設定が無ければ従来どおり。
+
+```json
+{
+  "extraLogPaths": {
+    "com.example.myjob": ["~/Library/Logs/example/run.log"]
+  }
+}
+```
+
+label は完全一致。パスは絶対パスか `~/` 始まりで、相対パスや環境変数は使えない。
+追加ログは設定順に `[log1]`、`[log2]` と表示し、同じパスは重複させない。
+設定は一覧と同じ間隔で再読込する。設定の警告はログ画面とステータスバーに表示する。
+壊れた項目は無視し、有効な他の項目は読み込む。存在しないファイルは読み取りエラーとして表示する。

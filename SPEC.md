@@ -236,7 +236,7 @@ uid の取得
 
 `core/logs.ts`
 
-* stdoutPath と stderrPath を対象にする。両方ある場合は行頭に `[out]` `[err]` を付けて時系列順に混ぜず、ファイルごとに末尾 N 行を読んで連結する
+* stdoutPath と stderrPath、および任意の `~/.config/launchpeek/config.json` の `extraLogPaths[label]` を対象にする。両方ある場合は行頭に `[out]` `[err]` を付けて時系列順に混ぜず、ファイルごとに末尾 N 行を読んで連結する
 * N は 200 とし、state にはこの分だけ保持する
 * logs モードの間は 1 秒ごとにファイルサイズを確認し、増えていれば差分を読む
 * ファイルが存在しない、または読めない場合はその旨を表示する
@@ -376,3 +376,12 @@ export interface AppState {
 * `bun test` が通る
 * 検証方法の手動確認がすべて済み、README に記録されている
 * `launchpeek` バイナリが生成され、起動して一覧が表示される
+
+## 追加ログ設定
+
+`core/config.ts` は任意の `~/.config/launchpeek/config.json` を読み、
+`extraLogPaths` の完全一致labelに対応するパス配列を返す。
+絶対パスと先頭の `~` のみ展開し、重複パスは除外する。
+JSON破損は設定全体を無視し、不正なlabel・要素は該当箇所だけ無視して警告する。
+一覧と同じ間隔で再読込し、ログ画面を開いたままでも反映する。
+設定無しでは既存動作を維持し、stdout / stderr → 追加ログの順に表示する。

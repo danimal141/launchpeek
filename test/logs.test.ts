@@ -102,3 +102,16 @@ describe("formatLogLines / logSourcesOf", () => {
     expect(logSourcesOf(job)).toHaveLength(2);
   });
 });
+
+test("追加ログは既存ソースと重複させず採番し、通常のtailと同じ経路で表示する", async () => {
+  const path = join(dir, "extra.log");
+  await writeFile(path, "extra output\n");
+  const sources = logSourcesOf({ stdoutPath: "/dev/null", stderrPath: "/tmp/err" } as Job,
+    ["/tmp/err", path, path, "/tmp/other"]);
+  expect(sources).toEqual([
+    { kind: "out", path: "/dev/null" }, { kind: "err", path: "/tmp/err" },
+    { kind: "log1", path }, { kind: "log2", path: "/tmp/other" },
+  ]);
+  expect(formatLogLines([await tailFile("log1", path)])).toEqual(["[log1] extra output"]);
+  expect(logSourcesOf({} as Job, [path])).toEqual([{ kind: "log1", path }]);
+});
