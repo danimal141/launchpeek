@@ -259,7 +259,7 @@ detail
 
 logs
 
-* 全画面で LogTail。上部 1 行に label とファイルパス
+* 全画面で LogTail。上部2行にlabel・ファイルパスと追従状態・表示位置
 
 ### キーバインド
 
@@ -299,6 +299,7 @@ export interface AppState {
   message?: string;
   pendingConfirm?: { kind: ActionKind; job: Job };
   logLines: string[];
+  logView: { paused?: { lines: string[]; top: number } };
   lastUpdated?: Date;
   loading: boolean;
 }
@@ -376,3 +377,13 @@ export interface AppState {
 * `bun test` が通る
 * 検証方法の手動確認がすべて済み、README に記録されている
 * `launchpeek` バイナリが生成され、起動して一覧が表示される
+
+## ログ閲覧
+
+ログのファイル順と同時表示を維持し、最新への追従を初期状態とする。
+日本語・ANSI色・タブを考慮して折り返し、折り返し後の行数で表示枠を計算する。
+j/k・上下矢印で表示行単位にスクロールし、gで保持範囲の先頭、Gで追従再開。
+スクロール中は表示用のログを固定し、追記・ローテーションで内容を変えない。
+読み取りは続け、Gで現在の末尾200行へ戻る。画面サイズ変更時は再描画する。
+ヘッダーはlabelとパス、追従状態と表示位置の2行。stderr本文の一律赤色表示は行わない。
+`core/log-view.ts` は折り返しと表示位置を計算し、UIは計算済みの表示行を描画する。

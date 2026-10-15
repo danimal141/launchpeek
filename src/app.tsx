@@ -1,4 +1,4 @@
-import { Box, useApp, useInput, useStdout } from "ink";
+import { Box, useApp, useInput, useWindowSize } from "ink";
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { runAction } from "./core/actions";
 import { copyLabel } from "./core/clipboard";
@@ -16,6 +16,7 @@ import {
   tailFile,
   type LogFileTail,
 } from "./core/logs";
+import { logBodyRows, logViewport } from "./core/log-view";
 import { emptySources, mergeJobs } from "./core/merge";
 import { loadDefinitions } from "./core/plist";
 import { watchAgentDirs } from "./core/watcher";
@@ -44,7 +45,7 @@ const ACTION_KEYS: Record<string, ActionKind> = {
 
 export function App() {
   const { exit } = useApp();
-  const { stdout } = useStdout();
+  const terminalSize = useWindowSize();
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const refreshing = useRef(false);
@@ -237,8 +238,17 @@ export function App() {
       }
       return;
     }
-    // logs は全画面表示なので閲覧キー以外は受け付けない
-    if (state.mode === "logs") return;
+    if (state.mode === "logs") {
+      if (input === "G") dispatch({ type: "log-follow" });
+      else if (input === "g" || input === "j" || input === "k" || key.upArrow || key.downArrow) {
+        dispatch({
+          type: "log-scroll",
+          movement: input === "g" ? "first" : input === "k" || key.upArrow ? -1 : 1,
+          width, rows: logBodyRows(height - 1),
+        });
+      }
+      return;
+    }
 
     if (input === "/") {
       dispatch({ type: "filter-editing", editing: true });
@@ -284,8 +294,8 @@ export function App() {
   }
 
   // pty によっては columns/rows が 0 になるため ?? ではなく || で補正する
-  const width = stdout.columns || 80;
-  const height = stdout.rows || 24;
+  const width = terminalSize.columns || 80;
+  const height = terminalSize.rows || 24;
   const listHeight = Math.max(3, height - 2);
   // detail モードでは左 4 割を縮小 JobList に使う
   const listWidth = Math.max(24, Math.floor(width * 0.4));
@@ -313,7 +323,8 @@ export function App() {
       <Box flexDirection="column" width={width}>
         <LogTail
           job={selectedJob(state)}
-          lines={state.logLines}
+          viewport={logViewport(state.logLines, state.logView, width, logBodyRows(height - 1))}
+          paused={state.logView.paused !== undefined}
           height={height - 1}
         />
         {statusLine}

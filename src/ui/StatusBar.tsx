@@ -4,7 +4,7 @@ import type { Mode } from "../state";
 const MODE_KEYS: Record<Mode, string> = {
   list: "j/k g/G:move  Enter:detail  l:logs  c/y:copy  r:kick  e/d:en/dis  u/U:out/strap  x:kill  /:filter  R:reload  q:quit",
   detail: "j/k:move  l:logs  c/y:copy  r:kick  e/d:en/dis  u/U:out/strap  x:kill  q/Esc:back",
-  logs: "q/Esc:back",
+  logs: "j/k:scroll  g/G:first/follow  q/Esc:back",
 };
 
 interface Props {
@@ -17,16 +17,16 @@ interface Props {
 export function StatusBar({ mode, message, confirmPrompt, warnings }: Props) {
   if (confirmPrompt !== undefined) {
     return (
-      <Text color="yellow" bold>
+      <Text color="yellow" bold wrap="truncate-end">
         {confirmPrompt}
       </Text>
     );
   }
   if (message !== undefined) {
-    return <Text color="yellow">{message}</Text>;
+    return <Text color="yellow" wrap="truncate-end">{message}</Text>;
   }
   return (
-    <Text dimColor>
+    <Text dimColor wrap="truncate-end">
       {MODE_KEYS[mode]}
       {warnings.length > 0 ? `  (${warnings.length} warnings)` : ""}
     </Text>
