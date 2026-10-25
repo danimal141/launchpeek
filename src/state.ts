@@ -1,3 +1,4 @@
+import { emptyConfig, type UserConfig } from "./core/config";
 import type { ActionKind, Job } from "./types";
 
 export type Mode = "list" | "detail" | "logs";
@@ -12,6 +13,8 @@ export interface AppState {
   message?: string;
   pendingConfirm?: { kind: ActionKind; job: Job };
   logLines: string[];
+  config: UserConfig;
+  configWarnings: string[];
   lastUpdated?: Date;
   loading: boolean;
   // logs モードは list と detail の両方から入れるため、戻り先を覚えておく
@@ -26,6 +29,8 @@ export const initialState: AppState = {
   filter: "",
   filterEditing: false,
   logLines: [],
+  config: emptyConfig(),
+  configWarnings: [],
   loading: true,
   logsReturnMode: "list",
 };
@@ -39,6 +44,7 @@ export type Action =
   | { type: "open-logs" }
   | { type: "close-logs" }
   | { type: "log-lines"; lines: string[] }
+  | { type: "config-updated"; config: UserConfig; warnings: string[] }
   | { type: "set-message"; message: string }
   | { type: "clear-message" }
   | { type: "confirm-request"; kind: ActionKind; job: Job }
@@ -117,6 +123,8 @@ export function reducer(state: AppState, action: Action): AppState {
       };
     case "close-logs":
       return { ...state, mode: state.logsReturnMode, logLines: [] };
+    case "config-updated":
+      return { ...state, config: action.config, configWarnings: action.warnings };
     case "log-lines":
       return { ...state, logLines: action.lines };
     case "set-message":

@@ -7,7 +7,7 @@ export const TAIL_LINES = 200;
 const TAIL_READ_BYTES = 256 * 1024;
 
 export interface LogFileTail {
-  kind: "out" | "err";
+  kind: "out" | "err" | `log${number}`;
   path: string;
   lines: string[];
   // 前回読んだ時点のファイルサイズ。差分読みの起点
@@ -23,7 +23,7 @@ function splitLines(text: string): string[] {
 }
 
 export async function tailFile(
-  kind: "out" | "err",
+  kind: "out" | "err" | `log${number}`,
   path: string,
   maxLines = TAIL_LINES,
 ): Promise<LogFileTail> {
@@ -73,13 +73,20 @@ export async function refreshTail(prev: LogFileTail): Promise<RefreshResult> {
   }
 }
 
-export function logSourcesOf(job: Job): Array<{ kind: "out" | "err"; path: string }> {
-  const sources: Array<{ kind: "out" | "err"; path: string }> = [];
-  if (job.stdoutPath !== undefined) {
-    sources.push({ kind: "out", path: job.stdoutPath });
-  }
-  if (job.stderrPath !== undefined && job.stderrPath !== job.stdoutPath) {
-    sources.push({ kind: "err", path: job.stderrPath });
+export function logSourcesOf(job: Job, extraPaths: readonly string[] = []): Array<{ kind: LogFileTail["kind"]; path: string }> {
+  const sources: Array<{ kind: LogFileTail["kind"]; path: string }> = [];
+  const seen = new Set<string>();
+  const push = (kind: LogFileTail["kind"], path: string | undefined) => {
+    if (path === undefined || seen.has(path)) return;
+    seen.add(path);
+    sources.push({ kind, path });
+  };
+  push("out", job.stdoutPath);
+  push("err", job.stderrPath);
+  let extraCount = 0;
+  for (const path of extraPaths) {
+    if (seen.has(path)) continue;
+    push(`log${++extraCount}`, path);
   }
   return sources;
 }
