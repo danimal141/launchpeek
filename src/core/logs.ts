@@ -12,6 +12,8 @@ export interface LogFileTail {
   lines: string[];
   // 前回読んだ時点のファイルサイズ。差分読みの起点
   size: number;
+  ino: number;
+  mtimeMs: number;
   error?: string;
 }
 
@@ -28,15 +30,30 @@ export async function tailFile(
   maxLines = TAIL_LINES,
 ): Promise<LogFileTail> {
   try {
+    // ino / mtimeMs は refreshTail の置き換え判定の起点になる。
+    // 二重 stat で取ると読んだ内容と識別情報がずれるので、必ずこの 1 回から取る
     const info = await stat(path);
     const start = Math.max(0, info.size - TAIL_READ_BYTES);
     const text = await Bun.file(path).slice(start, info.size).text();
     const lines = splitLines(text);
     // 途中から読んだ場合、先頭は行の断片なので捨てる
     if (start > 0 && lines.length > 0) lines.shift();
-    return { kind, path, lines: lines.slice(-maxLines), size: info.size };
+    return {
+      kind, path,
+      lines: lines.slice(-maxLines),
+      size: info.size,
+      ino: info.ino,
+      mtimeMs: info.mtimeMs,
+    };
   } catch (err) {
-    return { kind, path, lines: [], size: 0, error: String(err) };
+    return {
+      kind, path,
+      lines: [],
+      size: 0,
+      ino: 0,
+      mtimeMs: 0,
+      error: String(err),
+    };
   }
 }
 
@@ -45,29 +62,80 @@ export interface RefreshResult {
   changed: boolean;
 }
 
-// 1 秒ごとのポーリングから呼ばれる。サイズが増えていれば差分だけ読む
+// 読み直した結果が前回と同じなら再描画する意味が無い。
+// /dev/null は size 0 のまま mtime だけが動くため、これが無いと毎秒再描画になる
+function sameContent(a: LogFileTail, b: LogFileTail): boolean {
+  if (a.error !== b.error) return false;
+  if (a.lines.length !== b.lines.length) return false;
+  return a.lines.every((line, i) => line === b.lines[i]);
+}
+
+// 1 秒ごとのポーリングから呼ばれる。判定は下の順序に意味があるので入れ替えないこと:
+// error 復帰を ino 判定より先に見ることで、消えた後に inode を再利用して
+// 再作成されたファイルを「変化なし」と誤判定せずに済む。
+// また同サイズ書き換えを mtime で拾う代償として、毎回同じサイズで書き換わる
+// ファイルは毎ポーリングで読み直しになる (stat 1 回で直す以上避けられない)
 export async function refreshTail(prev: LogFileTail): Promise<RefreshResult> {
-  let size: number;
+  let info: Awaited<ReturnType<typeof stat>>;
   try {
-    size = (await stat(prev.path)).size;
+    info = await stat(prev.path);
   } catch (err) {
-    const errored = { ...prev, lines: [], size: 0, error: String(err) };
+    const errored = {
+      ...prev,
+      lines: [],
+      size: 0,
+      ino: 0,
+      mtimeMs: 0,
+      error: String(err),
+    };
     return { tail: errored, changed: prev.error === undefined };
   }
-  if (prev.error !== undefined || size < prev.size) {
-    // 消えていたファイルの復活やローテーションは末尾から読み直す
-    return { tail: await tailFile(prev.kind, prev.path), changed: true };
+  // 読み直した tail は内容が同じでも必ず採用する。ino / mtime を更新しないと
+  // 次のポーリングでも同じ判定に落ちて読み直しを繰り返すため
+  const retail = async (): Promise<RefreshResult> => {
+    const next = await tailFile(prev.kind, prev.path);
+    return { tail: next, changed: !sameContent(prev, next) };
+  };
+  if (prev.error !== undefined) {
+    // 消えていたファイルの復活は末尾から読み直す
+    return retail();
   }
-  if (size === prev.size) {
-    return { tail: prev, changed: false };
+  if (info.ino !== prev.ino) {
+    // rename + 再作成や symlink の張り替え。stat は symlink を辿るのでここで拾える
+    return retail();
+  }
+  if (info.size < prev.size) {
+    // truncate やローテーション
+    return retail();
+  }
+  if (info.size === prev.size) {
+    // 同じサイズでも mtime が動いていれば中身が入れ替わっている可能性がある
+    if (info.mtimeMs === prev.mtimeMs) return { tail: prev, changed: false };
+    return retail();
   }
   try {
-    const text = await Bun.file(prev.path).slice(prev.size, size).text();
+    const text = await Bun.file(prev.path).slice(prev.size, info.size).text();
     const lines = [...prev.lines, ...splitLines(text)].slice(-TAIL_LINES);
-    return { tail: { ...prev, lines, size }, changed: true };
+    return {
+      tail: {
+        ...prev,
+        lines,
+        size: info.size,
+        ino: info.ino,
+        mtimeMs: info.mtimeMs,
+      },
+      changed: true,
+    };
   } catch (err) {
     return {
-      tail: { ...prev, lines: [], size: 0, error: String(err) },
+      tail: {
+        ...prev,
+        lines: [],
+        size: 0,
+        ino: 0,
+        mtimeMs: 0,
+        error: String(err),
+      },
       changed: true,
     };
   }
