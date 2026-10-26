@@ -72,7 +72,7 @@ function withFilter(state: AppState, filter: string): AppState {
   const next: AppState = { ...state, filter };
   const visible = visibleJobs(next);
   const followed = visible.findIndex((job) => job.label === prevLabel);
-  next.selectedIndex = followed >= 0 ? followed : 0;
+  next.selectedIndex = Math.max(followed, 0);
   return next;
 }
 
@@ -124,7 +124,11 @@ export function reducer(state: AppState, action: Action): AppState {
     case "close-logs":
       return { ...state, mode: state.logsReturnMode, logLines: [] };
     case "config-updated":
-      return { ...state, config: action.config, configWarnings: action.warnings };
+      return {
+        ...state,
+        config: action.config,
+        configWarnings: action.warnings,
+      };
     case "log-lines":
       return { ...state, logLines: action.lines };
     case "set-message":
@@ -132,7 +136,10 @@ export function reducer(state: AppState, action: Action): AppState {
     case "clear-message":
       return { ...state, message: undefined };
     case "confirm-request":
-      return { ...state, pendingConfirm: { kind: action.kind, job: action.job } };
+      return {
+        ...state,
+        pendingConfirm: { kind: action.kind, job: action.job },
+      };
     case "confirm-clear":
       return { ...state, pendingConfirm: undefined };
     case "filter-editing":
@@ -147,7 +154,10 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, selectedIndex: 0 };
     case "select-last": {
       const visible = visibleJobs(state);
-      return { ...state, selectedIndex: clampIndex(visible.length - 1, visible.length) };
+      return {
+        ...state,
+        selectedIndex: clampIndex(visible.length - 1, visible.length),
+      };
     }
   }
 }

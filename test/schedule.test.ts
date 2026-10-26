@@ -3,7 +3,9 @@ import { nextRun } from "../src/core/schedule";
 import type { CalendarInterval, JobDefinition } from "../src/types";
 
 function def(
-  overrides: Partial<Pick<JobDefinition, "startInterval" | "startCalendarInterval">>,
+  overrides: Partial<
+    Pick<JobDefinition, "startInterval" | "startCalendarInterval">
+  >,
 ): JobDefinition {
   return {
     label: "test",
@@ -22,14 +24,8 @@ function cal(ci: CalendarInterval | CalendarInterval[]): JobDefinition {
 }
 
 // テストはローカルタイムゾーン前提で Date を組み立てる
-const at = (
-  y: number,
-  mon: number,
-  d: number,
-  h = 0,
-  min = 0,
-  sec = 0,
-): Date => new Date(y, mon - 1, d, h, min, sec);
+const at = (y: number, mon: number, d: number, h = 0, min = 0, sec = 0): Date =>
+  new Date(y, mon - 1, d, h, min, sec);
 
 describe("nextRun", () => {
   test("スケジュールが無ければ undefined", () => {
@@ -100,8 +96,12 @@ describe("nextRun", () => {
     test("weekday は 0 と 7 をどちらも日曜として扱う", () => {
       const now = at(2026, 9, 1, 12, 0);
       const sunday = at(2026, 9, 6, 0, 0);
-      expect(nextRun(cal({ weekday: 0, hour: 0, minute: 0 }), now)).toEqual(sunday);
-      expect(nextRun(cal({ weekday: 7, hour: 0, minute: 0 }), now)).toEqual(sunday);
+      expect(nextRun(cal({ weekday: 0, hour: 0, minute: 0 }), now)).toEqual(
+        sunday,
+      );
+      expect(nextRun(cal({ weekday: 7, hour: 0, minute: 0 }), now)).toEqual(
+        sunday,
+      );
     });
 
     test("day 指定で月をまたぐ", () => {

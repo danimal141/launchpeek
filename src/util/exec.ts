@@ -39,8 +39,7 @@ export async function exec(
   try {
     const proc = Bun.spawn({
       cmd,
-      stdin:
-        stdin === undefined ? "ignore" : new TextEncoder().encode(stdin),
+      stdin: stdin === undefined ? "ignore" : new TextEncoder().encode(stdin),
       stdout: "pipe",
       stderr: "pipe",
     });

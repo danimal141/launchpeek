@@ -9,7 +9,13 @@ interface Props {
   warnings?: readonly string[];
 }
 
-export function LogTail({ job, lines, height, extraPaths = [], warnings = [] }: Props) {
+export function LogTail({
+  job,
+  lines,
+  height,
+  extraPaths = [],
+  warnings = [],
+}: Props) {
   const paths = [job?.stdoutPath, job?.stderrPath, ...extraPaths]
     .filter((p): p is string => p !== undefined)
     .join("  ");
@@ -22,7 +28,12 @@ export function LogTail({ job, lines, height, extraPaths = [], warnings = [] }: 
         {job?.label ?? "-"} <Text dimColor>{paths || "(no log files)"}</Text>
       </Text>
       {shownWarnings.map((warning, i) => (
-        <Text key={i} color="red" wrap="truncate-end">{`config: ${warning}`}</Text>
+        <Text
+          // biome-ignore lint/suspicious/noArrayIndexKey: 警告文は重複し得るので index で区別する
+          key={i}
+          color="red"
+          wrap="truncate-end"
+        >{`config: ${warning}`}</Text>
       ))}
       {shown.length === 0 ? (
         <Text dimColor>
@@ -31,7 +42,7 @@ export function LogTail({ job, lines, height, extraPaths = [], warnings = [] }: 
       ) : (
         shown.map((line, i) => (
           <Text
-            // ログ行に安定した key は無いので index で十分
+            // biome-ignore lint/suspicious/noArrayIndexKey: ログ行に安定した key は無いので index で十分
             key={i}
             color={line.startsWith("[err]") ? "red" : undefined}
             wrap="truncate-end"

@@ -25,7 +25,13 @@ const EXIT_W = 5;
 const NEXT_RUN_W = 12;
 const SCHEDULE_W = 20;
 
-export function JobList({ jobs, selectedIndex, height, width, compact }: Props) {
+export function JobList({
+  jobs,
+  selectedIndex,
+  height,
+  width,
+  compact,
+}: Props) {
   // 既定の判断: 端末幅 80 未満では next run と schedule の列を省く
   const wide = !compact && width >= 80;
   const fixed = compact
@@ -37,10 +43,7 @@ export function JobList({ jobs, selectedIndex, height, width, compact }: Props) 
     (max, job) => Math.max(max, job.label.length),
     "LABEL".length,
   );
-  const labelWidth = Math.max(
-    10,
-    Math.min(width - fixed - 5, longestLabel),
-  );
+  const labelWidth = Math.max(10, Math.min(width - fixed - 5, longestLabel));
 
   // 選択行が常に見えるようにスクロール位置を決める
   const rowCount = Math.max(1, height - 1);
@@ -78,7 +81,10 @@ export function JobList({ jobs, selectedIndex, height, width, compact }: Props) 
           }
           if (wide) {
             cells.push(
-              truncatePad(job.nextRun ? formatTime(job.nextRun) : "-", NEXT_RUN_W),
+              truncatePad(
+                job.nextRun ? formatTime(job.nextRun) : "-",
+                NEXT_RUN_W,
+              ),
               truncatePad(summarizeSchedule(job), SCHEDULE_W),
             );
           }
