@@ -1,6 +1,8 @@
 # launchpeek 実装指示書
 
-このファイルは Claude Code への実装依頼書である。プロジェクト直下に置き、ここに書かれた仕様と手順に従って `launchpeek` を最後まで実装すること。判断に迷った場合は「既定の判断」の節を優先し、それでも決められない場合のみ質問する。
+このファイルは Claude Code への実装依頼書である。ここに書かれた仕様と手順に従って `launchpeek` を最後まで実装すること。判断に迷った場合は「既定の判断」の節を優先し、それでも決められない場合のみ質問する。
+
+英訳を [spec.md](./spec.md) に置いている。内容が食い違うときはこのファイルを正とし、英訳を追従させる。
 
 ## 概要
 
@@ -81,7 +83,9 @@ launchpeek/
     launchctl.test.ts
     schedule.test.ts
     fixtures/            launchctl print の出力サンプル、plist サンプル
-  README.md
+    e2e/                 アプリを疑似端末で起動する E2E テスト
+  README.md              英語版
+  README.ja.md           日本語版
   package.json
   tsconfig.json
 ```
@@ -370,13 +374,12 @@ export interface AppState {
 * 色は Ink の標準色名のみ使う
 * 日時は `MM-DD HH:mm` のローカル時刻で表示する
 * フィルタは大文字小文字を区別しない
-* テストが書きにくい箇所は fixtures を増やしてでもテストを書く。UI のテストは不要
+* テストが書きにくい箇所は fixtures を増やしてでもテストを書く。UI は E2E テスト（`test/e2e/`）で確かめる
 
 ## 完了の定義
 
 * 作業手順のすべてが完了し、コミットされている
-* `bun test` が通る
-* 検証方法の手動確認がすべて済み、README に記録されている
+* `bun test` と `bun run test:e2e` が通る
 * `launchpeek` バイナリが生成され、起動して一覧が表示される
 
 ## 追加ログ設定

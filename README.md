@@ -4,7 +4,7 @@ English | [日本語](./README.ja.md)
 
 A terminal app for macOS launchd jobs (LaunchAgents), in the spirit of the Sidekiq dashboard: browse the job list, inspect details and logs, and run kickstart / enable / disable and other actions right there.
 
-The source of truth for behavior is [docs/spec.md](./docs/spec.md). Design decisions and their rationale are in [docs/design.md](./docs/design.md). Both are written in Japanese.
+The specification is in [docs/spec.md](./docs/spec.md), an English translation of the canonical Japanese version, [docs/spec.ja.md](./docs/spec.ja.md). Design decisions and their rationale are in [docs/design.md](./docs/design.md) (Japanese only).
 
 ## Getting started
 
