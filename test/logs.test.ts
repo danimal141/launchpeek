@@ -1,4 +1,3 @@
-import type { Job } from "../src/types";
 import { afterAll, describe, expect, test } from "bun:test";
 import {
   appendFile,
@@ -16,14 +15,14 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
-  refreshTail,
   formatLogLines,
-  logSourcesOf,
-  tailFile,
-  TAIL_LINES,
   type LogFileTail,
+  logSourcesOf,
+  refreshTail,
+  TAIL_LINES,
+  tailFile,
 } from "../src/core/logs";
-
+import type { Job } from "../src/types";
 
 const dir = await mkdtemp(join(tmpdir(), "launchpeek-logs-"));
 afterAll(() => rm(dir, { recursive: true, force: true }));
@@ -211,15 +210,37 @@ describe("formatLogLines / logSourcesOf", () => {
 
   test("out と err を混ぜずにファイルごとに連結する", () => {
     const lines = formatLogLines([
-      { kind: "out", path: "/tmp/a.out", lines: ["o1", "o2"], size: 0, ino: 0, mtimeMs: 0 },
-      { kind: "err", path: "/tmp/a.err", lines: ["e1"], size: 0, ino: 0, mtimeMs: 0 },
+      {
+        kind: "out",
+        path: "/tmp/a.out",
+        lines: ["o1", "o2"],
+        size: 0,
+        ino: 0,
+        mtimeMs: 0,
+      },
+      {
+        kind: "err",
+        path: "/tmp/a.err",
+        lines: ["e1"],
+        size: 0,
+        ino: 0,
+        mtimeMs: 0,
+      },
     ]);
     expect(lines).toEqual(["[out] o1", "[out] o2", "[err] e1"]);
   });
 
   test("読めないファイルはその旨を表示する", () => {
     const lines = formatLogLines([
-      { kind: "out", path: "/tmp/x", lines: [], size: 0, ino: 0, mtimeMs: 0, error: "ENOENT" },
+      {
+        kind: "out",
+        path: "/tmp/x",
+        lines: [],
+        size: 0,
+        ino: 0,
+        mtimeMs: 0,
+        error: "ENOENT",
+      },
     ]);
     expect(lines[0]).toContain("cannot read /tmp/x");
   });
@@ -234,12 +255,18 @@ describe("formatLogLines / logSourcesOf", () => {
 test("追加ログは既存ソースと重複させず採番し、通常のtailと同じ経路で表示する", async () => {
   const path = join(dir, "extra.log");
   await writeFile(path, "extra output\n");
-  const sources = logSourcesOf({ stdoutPath: "/dev/null", stderrPath: "/tmp/err" } as Job,
-    ["/tmp/err", path, path, "/tmp/other"]);
+  const sources = logSourcesOf(
+    { stdoutPath: "/dev/null", stderrPath: "/tmp/err" } as Job,
+    ["/tmp/err", path, path, "/tmp/other"],
+  );
   expect(sources).toEqual([
-    { kind: "out", path: "/dev/null" }, { kind: "err", path: "/tmp/err" },
-    { kind: "log1", path }, { kind: "log2", path: "/tmp/other" },
+    { kind: "out", path: "/dev/null" },
+    { kind: "err", path: "/tmp/err" },
+    { kind: "log1", path },
+    { kind: "log2", path: "/tmp/other" },
   ]);
-  expect(formatLogLines([await tailFile("log1", path)])).toEqual(["[log1] extra output"]);
+  expect(formatLogLines([await tailFile("log1", path)])).toEqual([
+    "[log1] extra output",
+  ]);
   expect(logSourcesOf({} as Job, [path])).toEqual([{ kind: "log1", path }]);
 });

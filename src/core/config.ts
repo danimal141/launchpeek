@@ -131,16 +131,15 @@ export async function loadConfig(
   } catch (err) {
     return {
       config: emptyConfig(),
-      warnings: [`設定ファイルの JSON が壊れています (${path}): ${String(err)}`],
+      warnings: [
+        `設定ファイルの JSON が壊れています (${path}): ${String(err)}`,
+      ],
     };
   }
   return parseConfig(raw);
 }
 
-export function extraLogPathsFor(
-  config: UserConfig,
-  label: string,
-): string[] {
+export function extraLogPathsFor(config: UserConfig, label: string): string[] {
   // UserConfig を素の object リテラルから組んだ呼び出し元もありうるので、
   // ここでも own property だけを見る (label は plist 由来の外部入力)
   if (!Object.hasOwn(config.extraLogPaths, label)) return [];

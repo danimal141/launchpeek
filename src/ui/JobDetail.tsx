@@ -52,7 +52,9 @@ export function JobDetail({ job, height, extraPaths = [] }: Props) {
       />
       <Row name="stdout" value={job.stdoutPath ?? "-"} />
       <Row name="stderr" value={job.stderrPath ?? "-"} />
-      {extraPaths.map((path, i) => <Row key={path} name={`log${i + 1}`} value={path} />)}
+      {extraPaths.map((path, i) => (
+        <Row key={path} name={`log${i + 1}`} value={path} />
+      ))}
       <Row name="pid" value={rt.pid?.toString() ?? "-"} />
       <Row
         name="state"
@@ -60,7 +62,10 @@ export function JobDetail({ job, height, extraPaths = [] }: Props) {
       />
       <Row name="last exit" value={rt.lastExitCode?.toString() ?? "-"} />
       <Row name="run count" value={rt.runCount?.toString() ?? "-"} />
-      <Row name="next run" value={job.nextRun ? formatTime(job.nextRun) : "-"} />
+      <Row
+        name="next run"
+        value={job.nextRun ? formatTime(job.nextRun) : "-"}
+      />
     </Box>
   );
 }

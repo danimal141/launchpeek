@@ -51,7 +51,9 @@ export function parsePrint(output: string, exitCode: number): PrintInfo {
 
   const pid = output.match(/^\s*pid = (\d+)$/m)?.[1];
   const state = output.match(/^\s*state = (.+)$/m)?.[1];
-  const exit = output.match(/^\s*last exit code = (-?\d+|\(never exited\))/m)?.[1];
+  const exit = output.match(
+    /^\s*last exit code = (-?\d+|\(never exited\))/m,
+  )?.[1];
   const runs = output.match(/^\s*(?:run count|runs) = (\d+)$/m)?.[1];
 
   return {
@@ -59,12 +61,17 @@ export function parsePrint(output: string, exitCode: number): PrintInfo {
     pid: pid !== undefined ? Number(pid) : undefined,
     state: state?.trim(),
     lastExitCode:
-      exit !== undefined && exit !== "(never exited)" ? Number(exit) : undefined,
+      exit !== undefined && exit !== "(never exited)"
+        ? Number(exit)
+        : undefined,
     runCount: runs !== undefined ? Number(runs) : undefined,
   };
 }
 
-export async function fetchPrint(uid: number, label: string): Promise<PrintInfo> {
+export async function fetchPrint(
+  uid: number,
+  label: string,
+): Promise<PrintInfo> {
   const result = await exec(["launchctl", "print", `gui/${uid}/${label}`]);
   return parsePrint(result.stdout, result.exitCode);
 }

@@ -1,5 +1,5 @@
 import type { ActionResult } from "../types";
-import { exec, type ExecResult } from "../util/exec";
+import { type ExecResult, exec } from "../util/exec";
 
 type Exec = (
   cmd: string[],

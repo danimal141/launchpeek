@@ -1,7 +1,7 @@
 import { readdir } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { parse as parsePlistXml, parseBinary } from "plist";
+import { parseBinary, parse as parsePlistXml } from "plist";
 import type { CalendarInterval, Domain, JobDefinition } from "../types";
 import { exec } from "../util/exec";
 
@@ -39,9 +39,7 @@ function toCalendarInterval(value: unknown): CalendarInterval | undefined {
 }
 
 // dict でも dict の配列でも受け付け、必ず配列に正規化する (SPEC)
-function toCalendarIntervals(
-  value: unknown,
-): CalendarInterval[] | undefined {
+function toCalendarIntervals(value: unknown): CalendarInterval[] | undefined {
   if (value === undefined) return undefined;
   const items = Array.isArray(value) ? value : [value];
   const intervals = items
@@ -102,7 +100,10 @@ export async function loadDefinition(
     try {
       // BOM や先頭空白があると xmldom が stderr にノイズを吐くので除去する
       raw = parsePlistXml(
-        new TextDecoder().decode(bytes).replace(/^\uFEFF/, "").trimStart(),
+        new TextDecoder()
+          .decode(bytes)
+          .replace(/^\uFEFF/, "")
+          .trimStart(),
       );
     } catch {
       // バイナリ plist は XML パーサで読めないので parseBinary を試す

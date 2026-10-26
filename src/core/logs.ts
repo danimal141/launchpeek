@@ -39,7 +39,8 @@ export async function tailFile(
     // 途中から読んだ場合、先頭は行の断片なので捨てる
     if (start > 0 && lines.length > 0) lines.shift();
     return {
-      kind, path,
+      kind,
+      path,
       lines: lines.slice(-maxLines),
       size: info.size,
       ino: info.ino,
@@ -47,7 +48,8 @@ export async function tailFile(
     };
   } catch (err) {
     return {
-      kind, path,
+      kind,
+      path,
       lines: [],
       size: 0,
       ino: 0,
@@ -141,7 +143,10 @@ export async function refreshTail(prev: LogFileTail): Promise<RefreshResult> {
   }
 }
 
-export function logSourcesOf(job: Job, extraPaths: readonly string[] = []): Array<{ kind: LogFileTail["kind"]; path: string }> {
+export function logSourcesOf(
+  job: Job,
+  extraPaths: readonly string[] = [],
+): Array<{ kind: LogFileTail["kind"]; path: string }> {
   const sources: Array<{ kind: LogFileTail["kind"]; path: string }> = [];
   const seen = new Set<string>();
   const push = (kind: LogFileTail["kind"], path: string | undefined) => {

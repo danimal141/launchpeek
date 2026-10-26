@@ -2,6 +2,7 @@ import { Box, useApp, useInput, useStdout } from "ink";
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { runAction } from "./core/actions";
 import { copyLabel } from "./core/clipboard";
+import { extraLogPathsFor, loadConfig } from "./core/config";
 import {
   fetchDisabledLabels,
   fetchList,
@@ -11,12 +12,11 @@ import {
 } from "./core/launchctl";
 import {
   formatLogLines,
+  type LogFileTail,
   logSourcesOf,
   refreshTail,
   tailFile,
-  type LogFileTail,
 } from "./core/logs";
-import { extraLogPathsFor, loadConfig } from "./core/config";
 import { emptySources, mergeJobs } from "./core/merge";
 import { loadDefinitions } from "./core/plist";
 import { watchAgentDirs } from "./core/watcher";
@@ -76,7 +76,11 @@ export function App() {
         warnings.push(String(err));
       }
       const configResult = await configPromise;
-      dispatch({ type: "config-updated", config: configResult.config, warnings: configResult.warnings });
+      dispatch({
+        type: "config-updated",
+        config: configResult.config,
+        warnings: configResult.warnings,
+      });
       dispatch({
         type: "jobs-updated",
         jobs: mergeJobs(definitions, sources, new Date()),
@@ -151,15 +155,20 @@ export function App() {
   const jobsRef = useRef(state.jobs);
   jobsRef.current = state.jobs;
   const selectedLabel = selectedJob(state)?.label;
-  const configuredPaths = selectedLabel ? extraLogPathsFor(state.config, selectedLabel) : [];
+  const configuredPaths = selectedLabel
+    ? extraLogPathsFor(state.config, selectedLabel)
+    : [];
   const logJob = selectedJob(state);
-  const extraPaths = logJob ? logSourcesOf(logJob, configuredPaths)
-    .filter((source) => source.kind !== "out" && source.kind !== "err")
-    .map((source) => source.path) : [];
+  const extraPaths = logJob
+    ? logSourcesOf(logJob, configuredPaths)
+        .filter((source) => source.kind !== "out" && source.kind !== "err")
+        .map((source) => source.path)
+    : [];
   const extraPathsRef = useRef(extraPaths);
   extraPathsRef.current = extraPaths;
   const extraPathsKey = extraPaths.join("\u0000");
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: extraPathsKey は追加ログパスの変化で tail を張り直すためのトリガー
   useEffect(() => {
     if (state.mode !== "logs") return;
     const job = jobsRef.current.find((j) => j.label === selectedLabel);
@@ -170,12 +179,15 @@ export function App() {
     let tails: LogFileTail[] = [];
 
     const publish = () => {
-      if (!stopped) dispatch({ type: "log-lines", lines: formatLogLines(tails) });
+      if (!stopped)
+        dispatch({ type: "log-lines", lines: formatLogLines(tails) });
     };
 
     (async () => {
       tails = await Promise.all(
-        logSourcesOf(job, extraPathsRef.current).map((s) => tailFile(s.kind, s.path)),
+        logSourcesOf(job, extraPathsRef.current).map((s) =>
+          tailFile(s.kind, s.path),
+        ),
       );
       publish();
     })();
@@ -355,7 +367,11 @@ export function App() {
               compact
             />
           </Box>
-          <JobDetail job={selectedJob(state)} height={listHeight} extraPaths={extraPaths} />
+          <JobDetail
+            job={selectedJob(state)}
+            height={listHeight}
+            extraPaths={extraPaths}
+          />
         </Box>
       ) : (
         <JobList

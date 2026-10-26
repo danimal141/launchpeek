@@ -1,4 +1,4 @@
-import { watch, type FSWatcher } from "node:fs";
+import { type FSWatcher, watch } from "node:fs";
 import { AGENT_DIRS } from "./plist";
 
 const DEBOUNCE_MS = 300;

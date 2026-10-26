@@ -82,7 +82,12 @@ export function mergeJobs(
       // 未ロード / 無効のジョブは launchd に予定が無いので nextRun を出さない
       const run =
         runtime.loaded && runtime.enabled ? nextRun(def, now) : undefined;
-      return { ...def, runtime, nextRun: run, category: categorize(runtime, run) };
+      return {
+        ...def,
+        runtime,
+        nextRun: run,
+        category: categorize(runtime, run),
+      };
     })
     .sort((a, b) => a.label.localeCompare(b.label));
 }
