@@ -17,6 +17,8 @@ jobs:
           bun-version: latest
       - run: bun install --frozen-lockfile
         if: hashFiles('bun.lock') != ''
+      - run: bunx biome ci .
+        if: hashFiles('biome.json') != ''
       - run: bunx tsc --noEmit
         if: hashFiles('tsconfig.json') != ''
       - run: bun test
