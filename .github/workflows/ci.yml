@@ -23,3 +23,6 @@ jobs:
         if: hashFiles('tsconfig.json') != ''
       - run: bun test
         if: hashFiles('bun.lock') != ''
+      # 実物のアプリを PTY で起動し、偽の launchctl に対して操作を確かめる
+      - run: bun run test:e2e
+        if: hashFiles('bun.lock') != ''
