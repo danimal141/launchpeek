@@ -221,7 +221,6 @@ export function App() {
     input: string,
     key: Parameters<Parameters<typeof useInput>[0]>[1],
   ) {
-    // 確認待ち中は y で実行、n / Esc / q で取り消し。他のキーは無視する
     if (state.pendingConfirm !== undefined) {
       const { kind, job } = state.pendingConfirm;
       if (input === "y") {
@@ -233,7 +232,6 @@ export function App() {
       return;
     }
 
-    // フィルタ編集中は文字入力として扱う
     if (state.filterEditing) {
       if (key.escape) {
         dispatch({ type: "filter-clear" });
@@ -332,7 +330,6 @@ export function App() {
   );
 
   if (state.mode === "logs") {
-    // 全画面で LogTail。上部 1 行に label とファイルパス (SPEC)
     return (
       <Box flexDirection="column" width={width}>
         <LogTail

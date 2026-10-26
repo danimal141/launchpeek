@@ -66,7 +66,6 @@ function parseLabelPaths(
       );
       continue;
     }
-    // 同じファイルを二重に表示しない
     if (seen.has(path)) continue;
     seen.add(path);
     resolved.push(path);
