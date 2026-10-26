@@ -1,71 +1,73 @@
-# launchpeek 実装指示書
+# launchpeek Implementation Brief
 
-このファイルは Claude Code への実装依頼書である。プロジェクト直下に置き、ここに書かれた仕様と手順に従って `launchpeek` を最後まで実装すること。判断に迷った場合は「既定の判断」の節を優先し、それでも決められない場合のみ質問する。
+This file is an implementation request for Claude Code. Follow the specification and steps written here to implement `launchpeek` to completion. When in doubt, give priority to the "Default decisions" section, and ask questions only when that still does not settle it.
 
-## 概要
+This is an English translation of [spec.ja.md](./spec.ja.md). If the two disagree, the Japanese version is canonical and this translation is updated to match.
 
-macOS の launchd ジョブ（LaunchAgents）を、Sidekiq の管理画面のように一覧・詳細・ログを確認し、その場で kickstart や enable / disable などの操作ができるターミナルアプリ。
+## Overview
 
-* 利用者は開発者本人のみ。ローカルで動けばよい
-* Bun + TypeScript + Ink で実装する
-* launchd に公開 API はないため、`launchctl` の出力と plist の読み取りに依存する
+A terminal app for macOS launchd jobs (LaunchAgents), in the spirit of the Sidekiq dashboard: browse the job list, inspect details and logs, and run kickstart, enable / disable, and other actions right there.
 
-## 成果物
+* The only user is the developer. It only needs to work locally
+* Implemented with Bun + TypeScript + Ink
+* launchd has no public API, so the app relies on `launchctl` output and reading plists
 
-* `bun run src/index.tsx` で起動するアプリ
-* `bun build --compile` で生成できる単一バイナリ `launchpeek`
-* README（起動方法、キーバインド、既知の制約）
-* データ取得層とスケジュール計算のユニットテスト
+## Deliverables
 
-## 環境前提
+* An app started with `bun run src/index.tsx`
+* A single binary `launchpeek` that can be produced with `bun build --compile`
+* A README (how to start, key bindings, known limitations)
+* Unit tests for the data-access layer and schedule calculation
 
-* macOS 13 以降
-* Bun がインストール済み
-* 開発中は user ドメイン（`gui/<uid>`）のみを扱う。sudo や特権ヘルパーは不要
+## Environment
 
-## 技術スタック
+* macOS 13 or later
+* Bun installed
+* During development, only the user domain (`gui/<uid>`) is handled. No sudo or privileged helper is needed
 
-* ランタイム: Bun
-* 言語: TypeScript（strict）
-* UI: Ink、React
-* plist パース: `plist` パッケージ
-* プロセス実行: `Bun.spawn`
-* ファイル監視: `fs.watch`
-* テスト: `bun test`
+## Tech stack
 
-依存パッケージは上記以外を原則追加しない。必要になった場合は理由をコミットメッセージに書く。
+* Runtime: Bun
+* Language: TypeScript (strict)
+* UI: Ink, React
+* plist parsing: the `plist` package
+* Process execution: `Bun.spawn`
+* File watching: `fs.watch`
+* Tests: `bun test`
 
-## スコープ
+As a rule, do not add dependencies beyond the above. If one becomes necessary, write the reason in the commit message.
 
-対象
+## Scope
 
-* `~/Library/LaunchAgents` と `/Library/LaunchAgents` の plist
-* ジョブ一覧、詳細、ログ tail
-* kickstart、enable / disable、bootstrap / bootout、kill
+In scope
 
-対象外（実装しない）
+* plists in `~/Library/LaunchAgents` and `/Library/LaunchAgents`
+* Job list, details, log tail
+* kickstart, enable / disable, bootstrap / bootout, kill
 
-* `/Library/LaunchDaemons` と `/System/Library/Launch*`
-* plist の編集、新規作成
-* 通知、常駐化
+Out of scope (do not implement)
 
-## ディレクトリ構成
+* `/Library/LaunchDaemons` and `/System/Library/Launch*`
+* Editing or creating plists
+* Notifications, running as a resident process
+
+## Directory layout
 
 ```
 launchpeek/
   src/
-    index.tsx            エントリポイント。render(<App />)
-    app.tsx              モード切り替えとキーバインド
-    state.ts             reducer と Action 型
-    types.ts             Job などの型定義
+    index.tsx            Entry point. render(<App />)
+    app.tsx              Mode switching and key bindings
+    state.ts             reducer and Action types
+    types.ts             Type definitions such as Job
     core/
-      plist.ts           plist の探索と読み込み
-      launchctl.ts       launchctl の実行と出力パース
-      merge.ts           定義と状態を Label でマージ
-      schedule.ts        StartInterval / StartCalendarInterval から nextRun を計算
-      actions.ts         kickstart 等のアクション
-      logs.ts            ログファイルの tail
-      watcher.ts         LaunchAgents ディレクトリ監視
+      plist.ts           Finding and loading plists
+      launchctl.ts       Running launchctl and parsing its output
+      merge.ts           Merging definitions and state by Label
+      schedule.ts        Computing nextRun from StartInterval / StartCalendarInterval
+      actions.ts         Actions such as kickstart
+      logs.ts            Tailing log files
+      watcher.ts         Watching the LaunchAgents directories
     ui/
       Header.tsx
       JobList.tsx
@@ -74,23 +76,25 @@ launchpeek/
       StatusBar.tsx
       FilterInput.tsx
     util/
-      exec.ts            Bun.spawn の薄いラッパ
-      format.ts          列幅調整、時刻フォーマット
+      exec.ts            Thin wrapper around Bun.spawn
+      format.ts          Column width adjustment, time formatting
   test/
     plist.test.ts
     launchctl.test.ts
     schedule.test.ts
-    fixtures/            launchctl print の出力サンプル、plist サンプル
-  README.md
+    fixtures/            Sample launchctl print output, sample plists
+    e2e/                 E2E tests that launch the app in a pseudo-terminal
+  README.md              English version
+  README.ja.md           Japanese version
   package.json
   tsconfig.json
 ```
 
-`ui/` は `core/` を直接呼ばず、`state.ts` 経由でデータを受け取る。`core/` は Ink に依存しない。
+`ui/` does not call `core/` directly; it receives data through `state.ts`. `core/` does not depend on Ink.
 
-## 型定義
+## Type definitions
 
-`src/types.ts` は以下を基本にする。必要に応じてフィールドを追加してよいが、削除・改名はしない。
+`src/types.ts` is based on the following. Fields may be added as needed, but must not be removed or renamed.
 
 ```ts
 export type Domain = "user" | "system";
@@ -156,70 +160,70 @@ export interface ActionResult {
 }
 ```
 
-category の判定規則
+Rules for category
 
-* busy: pid がある
-* failed: lastExitCode が 0 以外
-* disabled: enabled が false、または loaded が false
-* scheduled: nextRun が計算できる
-* idle: 上記以外
+* busy: has a pid
+* failed: lastExitCode is not 0
+* disabled: enabled is false, or loaded is false
+* scheduled: nextRun can be computed
+* idle: none of the above
 
-判定は上から順に評価し、最初に一致したものを採用する。
+Evaluate from the top and use the first rule that matches.
 
-## plist 読み込み仕様
+## Loading plists
 
-* `~/Library/LaunchAgents/*.plist` と `/Library/LaunchAgents/*.plist` を列挙する
-* 読めないファイルはスキップし、警告として state に積む（アプリは落とさない）
-* バイナリ plist にも対応する（`plist` パッケージで読めない場合は `plutil -convert xml1 -o - <path>` にフォールバック）
-* `Label` が無い plist は無視する
-* `Program` が無く `ProgramArguments` がある場合は先頭要素を program とみなす
-* `StartCalendarInterval` は dict でも dict の配列でも受け付け、必ず配列に正規化する
-* `KeepAlive` は bool でも dict でも受け付け、dict の場合は true とみなす
+* Enumerate `~/Library/LaunchAgents/*.plist` and `/Library/LaunchAgents/*.plist`
+* Skip files that cannot be read and record a warning in state (the app must not crash)
+* Support binary plists (if the `plist` package cannot read one, fall back to `plutil -convert xml1 -o - <path>`)
+* Ignore plists without a `Label`
+* If there is no `Program` but there is `ProgramArguments`, treat its first element as program
+* Accept `StartCalendarInterval` as either a dict or an array of dicts, and always normalize it to an array
+* Accept `KeepAlive` as either a bool or a dict; a dict is treated as true
 
-## launchctl 仕様
+## launchctl
 
-すべて `util/exec.ts` 経由で非同期に実行する。タイムアウトは 5 秒。
+Run everything asynchronously through `util/exec.ts`. The timeout is 5 seconds.
 
-一覧取得
+Listing
 
-* `launchctl list` を実行し、各行の `PID` `Status` `Label` を読む
-* PID が `-` の場合は未実行、数値なら running
-* Status は last exit code として扱う（負数はシグナル）
+* Run `launchctl list` and read `PID`, `Status`, and `Label` from each line
+* A PID of `-` means not running; a number means running
+* Treat Status as the last exit code (negative values are signals)
 
-詳細取得
+Details
 
-* `launchctl print gui/<uid>/<label>` を実行する
-* 出力から以下を正規表現で拾う。取れない項目は undefined にする
+* Run `launchctl print gui/<uid>/<label>`
+* Pick the following out of the output with regular expressions. Anything that cannot be found is undefined
   * `pid = <n>`
   * `state = <word>`
-  * `last exit code = <n>` または `last exit code = (never exited)`
-  * `run count = <n>` または `runs = <n>`
-* 終了コードが 0 以外（ジョブが未ロード）の場合は loaded を false にする
-* 出力形式は macOS のバージョンで変わりうるため、パーサは `test/fixtures/` の複数サンプルで検証し、未知の行は無視する
+  * `last exit code = <n>` or `last exit code = (never exited)`
+  * `run count = <n>` or `runs = <n>`
+* If the exit code is not 0 (the job is not loaded), set loaded to false
+* The output format can change between macOS versions, so verify the parser against multiple samples in `test/fixtures/` and ignore unknown lines
 
-enabled 判定
+Determining enabled
 
-* `launchctl print-disabled gui/<uid>` を一度だけ実行し、`"<label>" => disabled` の行を集めて判定する
+* Run `launchctl print-disabled gui/<uid>` once, and collect the `"<label>" => disabled` lines to decide
 
-uid の取得
+Getting the uid
 
-* `process.getuid()` を使う
+* Use `process.getuid()`
 
-## スケジュール計算仕様
+## Schedule calculation
 
-`core/schedule.ts` の `nextRun(def: JobDefinition, now: Date): Date | undefined`
+`nextRun(def: JobDefinition, now: Date): Date | undefined` in `core/schedule.ts`
 
-* `StartInterval` がある場合: 直近の実行時刻は不明なので `now + StartInterval` 秒を返す（近似であることを README に明記）
-* `StartCalendarInterval` がある場合: 各 CalendarInterval について、now 以降で最初に条件を満たす時刻を分単位で探索し、最も早いものを返す。探索上限は 366 日
-* 指定されていないフィールドはワイルドカードとして扱う（cron と同じ）
-* weekday は 0 と 7 を日曜として扱う
-* どちらも無い場合は undefined
+* With `StartInterval`: the time of the last run is unknown, so return `now + StartInterval` seconds (state in the README that this is approximate)
+* With `StartCalendarInterval`: for each CalendarInterval, search minute by minute for the first time at or after now that satisfies it, and return the earliest. The search limit is 366 days
+* Fields that are not specified are wildcards (as in cron)
+* Both 0 and 7 for weekday mean Sunday
+* If neither is present, return undefined
 
-このモジュールは純粋関数にし、テストを最も厚く書く。
+Make this module pure functions and give it the most thorough tests.
 
-## アクション仕様
+## Actions
 
-`core/actions.ts` の `runAction(kind: ActionKind, job: Job): Promise<ActionResult>`
+`runAction(kind: ActionKind, job: Job): Promise<ActionResult>` in `core/actions.ts`
 
 * kickstart: `launchctl kickstart -k gui/<uid>/<label>`
 * enable: `launchctl enable gui/<uid>/<label>`
@@ -228,65 +232,65 @@ uid の取得
 * bootout: `launchctl bootout gui/<uid>/<label>`
 * kill: `launchctl kill SIGTERM gui/<uid>/<label>`
 
-* 終了コード 0 なら ok。それ以外は stderr の先頭行を message にする
-* 実行後は必ず状態を再取得する
-* bootout と kill は実行前に StatusBar で `y` の確認を求める
+* Exit code 0 means ok. Otherwise, use the first line of stderr as the message
+* Always reload the state after running an action
+* bootout and kill ask for confirmation with `y` in the StatusBar before running
 
-## ログ仕様
+## Logs
 
 `core/logs.ts`
 
-* stdoutPath と stderrPath、および任意の `~/.config/launchpeek/config.json` の `extraLogPaths[label]` を対象にする。両方ある場合は行頭に `[out]` `[err]` を付けて時系列順に混ぜず、ファイルごとに末尾 N 行を読んで連結する
-* N は 200 とし、state にはこの分だけ保持する
-* logs モードの間は1秒ごとにstatし、inode変更・縮小・同サイズでのmtime変更・読み取りエラーからの復帰で末尾を再読込する。増加時は差分だけを読む。同じ内容なら再描画しない
-* ファイルが存在しない、または読めない場合はその旨を表示する
+* Covers stdoutPath and stderrPath, plus `extraLogPaths[label]` from the optional `~/.config/launchpeek/config.json`. When both stdout and stderr exist, prefix lines with `[out]` and `[err]`; do not interleave them chronologically, but read the last N lines of each file and concatenate them
+* N is 200, and state keeps only that many lines
+* While in logs mode, stat each file every second, and re-read the tail on an inode change, shrinkage, an mtime change at the same size, or recovery from a read error. On growth, read only the difference. Do not re-render if the content is the same
+* If a file does not exist or cannot be read, say so on screen
 
-## UI 仕様
+## UI
 
-### 画面モード
+### Screen modes
 
 list
 
-* 上部に Header、中央に JobList、下部に StatusBar
-* 端末の高さに合わせて表示行数を決め、選択行が常に見えるようスクロールする
-* 列: category、label、pid、last exit、next run、schedule 要約
-* category ごとに色を分ける（busy: green、failed: red、disabled: gray、scheduled: cyan、idle: white）
+* Header at the top, JobList in the middle, StatusBar at the bottom
+* Decide the number of visible rows from the terminal height, and scroll so the selected row is always visible
+* Columns: category, label, pid, last exit, next run, schedule summary
+* Use a different color per category (busy: green, failed: red, disabled: gray, scheduled: cyan, idle: white)
 
 detail
 
-* 左に JobList を縮小表示、右に JobDetail
-* JobDetail は label、plistPath、program と arguments、schedule、keepAlive / runAtLoad、stdout / stderr パス、pid、state、lastExitCode、runCount、nextRun を表示
+* A narrowed JobList on the left, JobDetail on the right
+* JobDetail shows label, plistPath, program and arguments, schedule, keepAlive / runAtLoad, stdout / stderr paths, pid, state, lastExitCode, runCount, and nextRun
 
 logs
 
-* 全画面で LogTail。上部 1 行に label とファイルパス
+* LogTail in full screen. The top line shows the label and file paths
 
-### キーバインド
+### Key bindings
 
-* `j` / `k` または矢印: 上下移動
-* `g` / `G`: 先頭 / 末尾
-* `Enter`: detail を開く
-* `l`: logs を開く
-* `y`: 選択中のジョブの label をクリップボードへコピー
+* `j` / `k` or arrow keys: move up / down
+* `g` / `G`: top / bottom
+* `Enter`: open detail
+* `l`: open logs
+* `y`: copy the selected job's label to the clipboard
 * `r`: kickstart
 * `e`: enable
 * `d`: disable
-* `u`: bootout（確認あり）
+* `u`: bootout (with confirmation)
 * `U`: bootstrap
-* `x`: kill（確認あり）
-* `/`: フィルタ入力。label の部分一致。`Esc` で解除
-* `R`: 手動で再取得
-* `q` / `Esc`: 一つ前のモードへ戻る。list で押した場合は終了
+* `x`: kill (with confirmation)
+* `/`: filter input. Substring match on label. `Esc` clears it
+* `R`: reload manually
+* `q` / `Esc`: go back to the previous mode. Quits when pressed in list
 
 ### StatusBar
 
-* 通常時: 現在モードで使えるキーの一覧
-* アクション実行後: 結果メッセージを 3 秒表示して元に戻す
-* 確認待ち: `bootout <label>? (y/n)` のように表示
+* Normally: the list of keys available in the current mode
+* After an action: show the result message for 3 seconds, then go back
+* Waiting for confirmation: show something like `bootout <label>? (y/n)`
 
-## 状態管理
+## State management
 
-`src/state.ts` で `useReducer` 用の reducer を定義する。
+Define a reducer for `useReducer` in `src/state.ts`.
 
 ```ts
 export interface AppState {
@@ -304,86 +308,85 @@ export interface AppState {
 }
 ```
 
-* 一覧の再取得は 3 秒間隔のポーリング。`watcher.ts` が plist の変更を検知した場合は即時再取得する
-* 再取得中も UI は操作できる。前回の jobs を表示したまま差し替える
-* 選択中の label は再取得後も維持する（index ではなく label で追従する）
+* The list is reloaded by polling every 3 seconds. When `watcher.ts` detects a plist change, reload immediately
+* The UI stays usable while reloading. Keep showing the previous jobs and swap them in when ready
+* Keep the selected label after a reload (follow by label, not by index)
 
-## 非機能要件
+## Non-functional requirements
 
-* launchctl の呼び出しは並列数を 8 に制限する
-* アプリはどんな例外でも落ちず、warnings か message に出す
-* 起動から初回描画までは `launchctl list` の結果だけで行い、`launchctl print` の詳細は後から埋める
-* ジョブ数 100 程度で操作が引っかからないこと
+* Limit concurrent launchctl calls to 8
+* The app never crashes on any exception; it reports through warnings or message
+* From startup to the first render, use only the result of `launchctl list`, and fill in details from `launchctl print` afterwards
+* Operation must not stutter with around 100 jobs
 
-## 作業手順
+## Work steps
 
-以下の順に進め、各ステップの終わりで動作確認とコミットを行う。
+Proceed in the following order, checking that things work and committing at the end of each step.
 
-* プロジェクト初期化: `bun init`、依存追加、tsconfig（strict、jsx: react-jsx）、`bun run` と `bun test` が通る空の App
-* `core/launchctl.ts` の `list` パースとテスト。`test/fixtures/launchctl-list.txt` を用意する
-* `JobList` と `Header` を作り、j / k で選択できる list モードを完成させる
-* `core/plist.ts` と `core/merge.ts`、`core/launchctl.ts` の `print` パースを実装し、Job モデルを完成させる。fixtures を追加する
-* `core/schedule.ts` とテスト。一覧に next run を表示する
-* detail モードと `JobDetail`
-* logs モードと `LogTail`
-* `core/actions.ts` と各キーバインド、確認フロー、StatusBar のメッセージ表示
-* `watcher.ts` とポーリングの統合、label による選択追従
-* `bun build --compile src/index.tsx --outfile launchpeek` でバイナリ化し、README を書く
+* Project setup: `bun init`, add dependencies, tsconfig (strict, jsx: react-jsx), and an empty App for which `bun run` and `bun test` pass
+* `list` parsing in `core/launchctl.ts` with tests. Prepare `test/fixtures/launchctl-list.txt`
+* Build `JobList` and `Header`, and finish a list mode where j / k changes the selection
+* Implement `core/plist.ts`, `core/merge.ts`, and `print` parsing in `core/launchctl.ts` to complete the Job model. Add fixtures
+* `core/schedule.ts` with tests. Show next run in the list
+* detail mode and `JobDetail`
+* logs mode and `LogTail`
+* `core/actions.ts` with each key binding, the confirmation flow, and StatusBar messages
+* Integrate `watcher.ts` with polling, and follow the selection by label
+* Build the binary with `bun build --compile src/index.tsx --outfile launchpeek`, and write the README
 
-## 検証方法
+## Verification
 
-* `bun test` が全て通ること
-* `bun run test:e2e` が全て通ること。E2E テストは実物のアプリを疑似端末で起動し、偽の `launchctl` と一時ディレクトリの `HOME` に対して以下を確かめる
-  * 一覧に LaunchAgents のジョブが表示される
-  * `r` で kickstart でき、pid と run count が更新される
-  * `e` / `d` で enabled が切り替わる
-  * ログのあるジョブで `l` を押すとログが表示され、追記が反映される
-  * plist を追加・削除すると一覧に反映され、選択は label で追従する
-  * `u` は y/n の確認を挟み、`U` で bootstrap し直せる
-  * `bun run build` で作った単一バイナリが起動して一覧が表示される
-* 実際の launchd に対する挙動は E2E では確かめない。手元で確かめるときは `test/fixtures/com.example.launchpeek-demo.plist`（60 秒ごとに date を stdout に書くだけのジョブ）を使う。bootstrap 手順は README にある
+* All of `bun test` passes
+* All of `bun run test:e2e` passes. The E2E tests launch the real app in a pseudo-terminal and check the following against a fake `launchctl` and a `HOME` in a temporary directory
+  * LaunchAgents jobs appear in the list
+  * `r` kickstarts a job, and pid and run count are updated
+  * `e` / `d` toggle enabled
+  * Pressing `l` on a job with logs shows them, and appended lines show up
+  * Adding or removing a plist is reflected in the list, and the selection follows the label
+  * `u` asks y/n before running, and `U` bootstraps the job again
+  * The single binary built with `bun run build` starts and shows the list
+* The E2E tests do not check behavior against the real launchd. To check it by hand, use `test/fixtures/com.example.launchpeek-demo.plist` (a job that only writes date to stdout every 60 seconds). The README has the bootstrap steps
 
-## コーディング規約
+## Coding conventions
 
-* TypeScript strict。`any` は使わない。外部入力（launchctl 出力、plist）は unknown から絞り込む
-* `core/` は Ink と React に依存しない純粋なモジュールにする
-* 非同期処理は必ず try / catch し、失敗は戻り値か warnings で伝える
-* コメントは「なぜ」を書く。launchctl の出力形式に依存している箇所には必ずその旨を書く
-* フォーマットと lint は Biome（`bun run lint`）に従う
-* コミットは作業手順の単位で分ける
+* TypeScript strict. No `any`. Narrow external input (launchctl output, plists) from unknown
+* `core/` is pure modules that do not depend on Ink or React
+* Always wrap async work in try / catch, and report failures through return values or warnings
+* Comments explain why. Wherever the code depends on the launchctl output format, always say so
+* Follow Biome (`bun run lint`) for formatting and linting
+* Split commits by work step
 
-## やってはいけないこと
+## Do not
 
-* `launchctl` の出力形式を決め打ちして、未知の行で例外を投げる
-* system ドメインや sudo を必要とする処理を追加する
-* plist を書き換える
-* ログ全体を state に読み込む
-* 指示にない UI ライブラリ（ink-table 等）を追加する
+* Hard-code the `launchctl` output format and throw on unknown lines
+* Add anything that needs the system domain or sudo
+* Rewrite plists
+* Load whole log files into state
+* Add UI libraries not called for here (such as ink-table)
 
-## 既定の判断
+## Default decisions
 
-迷ったら次のとおりにする。
+When in doubt, do the following.
 
-* ポーリング間隔は 3 秒、ログは 1 秒
-* `launchctl print` に失敗したジョブは `launchctl list` の情報だけで表示し、state は unknown にする
-* 端末幅が 80 未満のときは next run と schedule の列を省略する
-* 色は Ink の標準色名のみ使う
-* 日時は `MM-DD HH:mm` のローカル時刻で表示する
-* フィルタは大文字小文字を区別しない
-* テストが書きにくい箇所は fixtures を増やしてでもテストを書く。UI のテストは不要
+* Poll every 3 seconds; logs every second
+* For jobs where `launchctl print` fails, show them using only the information from `launchctl list`, with state set to unknown
+* When the terminal is narrower than 80 columns, omit the next run and schedule columns
+* Use only Ink's standard color names
+* Show dates and times as `MM-DD HH:mm` in local time
+* Filtering is case-insensitive
+* Where tests are hard to write, add fixtures and write them anyway. The UI is checked by the E2E tests (`test/e2e/`)
 
-## 完了の定義
+## Definition of done
 
-* 作業手順のすべてが完了し、コミットされている
-* `bun test` が通る
-* 検証方法の手動確認がすべて済み、README に記録されている
-* `launchpeek` バイナリが生成され、起動して一覧が表示される
+* Every work step is done and committed
+* `bun test` and `bun run test:e2e` pass
+* The `launchpeek` binary is produced, starts, and shows the list
 
-## 追加ログ設定
+## Extra log configuration
 
-`core/config.ts` は任意の `~/.config/launchpeek/config.json` を読み、
-`extraLogPaths` の完全一致labelに対応するパス配列を返す。
-絶対パスと先頭の `~` のみ展開し、重複パスは除外する。
-JSON破損は設定全体を無視し、不正なlabel・要素は該当箇所だけ無視して警告する。
-一覧と同じ間隔で再読込し、ログ画面を開いたままでも反映する。
-設定無しでは既存動作を維持し、stdout / stderr → 追加ログの順に表示する。
+`core/config.ts` reads the optional `~/.config/launchpeek/config.json` and
+returns the array of paths for the label in `extraLogPaths` that matches exactly.
+Only absolute paths and a leading `~` are expanded, and duplicate paths are removed.
+If the JSON is broken, the whole config is ignored; invalid labels or elements are ignored individually with a warning.
+The config is reloaded at the same interval as the list, and changes apply even while the logs screen is open.
+Without a config, the existing behavior is kept, and logs are shown in the order stdout / stderr, then extra logs.
