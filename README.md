@@ -2,7 +2,7 @@
 
 macOS の launchd ジョブ (LaunchAgents) を Sidekiq の管理画面のように一覧・詳細・ログ確認し、その場で kickstart / enable / disable などの操作ができるターミナルアプリ。
 
-仕様の正は [SPEC.md](./SPEC.md)。設計判断とその理由は [docs/design.md](./docs/design.md) にまとめている。
+仕様の正は [docs/spec.md](./docs/spec.md)。設計判断とその理由は [docs/design.md](./docs/design.md) にまとめている。
 
 ## 起動方法
 
@@ -75,23 +75,15 @@ rm ~/Library/LaunchAgents/com.example.launchpeek-demo.plist
 ## 開発
 
 ```sh
+bun run lint         # format と lint (Biome)
+bun run typecheck    # 型チェック
 bun test             # ユニットテスト (core / state)
-bunx tsc --noEmit    # 型チェック
+bun run test:e2e     # E2E テスト
 ```
 
-CI (GitHub Actions) が PR / push で両方を実行する。
-
-## 動作確認済み
-
-2026-09-01、macOS 14.3.1 (Darwin 23.3) + Bun 1.3.14 で以下を確認した。
-
-- [x] 一覧に自分の LaunchAgents (27 ジョブ、user / system 両ディレクトリ) が表示される
-- [x] `r` で demo ジョブを kickstart でき、pid が表示され run count が 0 → 1 に更新される
-- [x] `e` / `d` で enabled が切り替わり、category が scheduled ⇔ disabled に変わる
-- [x] ログのあるジョブで `l` を押すとログが表示され、表示中の追記が 1 秒以内に反映される
-- [x] plist を追加すると数秒で一覧に現れ、削除すると消える。選択中のジョブは label で追従する
-- [x] `u` で y/n 確認が出て、n でキャンセル、y で bootout。`U` で bootstrap し直せる
-- [x] `./launchpeek` (単一バイナリ) が起動して一覧が表示される
+E2E テストは実物のアプリを疑似端末で起動し、キー入力に対する画面を確かめる。
+`launchctl` は `test/e2e/fake-launchctl.ts` に、`HOME` は一時ディレクトリに差し替えるので、手元の launchd には触れない。
+CI (GitHub Actions) が PR / push ですべてを実行する。
 
 ## 追加ログファイル
 

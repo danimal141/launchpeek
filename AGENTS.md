@@ -4,13 +4,14 @@
 
 * `bun run lint`: Biome で format と lint をチェックする（CI と同じ）
 * `bun run format`: Biome の自動修正を適用する
-* `bun run typecheck` / `bun test`: 型チェックとテスト
+* `bun run typecheck` / `bun test`: 型チェックとユニットテスト
+* `bun run test:e2e`: アプリを疑似端末で起動する E2E テスト（`test/e2e/`）
 
-変更後は上の 3 つ（lint、typecheck、test）が通ることを確認する。
+変更後は上の 4 つ（lint、typecheck、test、test:e2e）が通ることを確認する。画面やキー操作の振る舞いを変えたら、E2E テストも追加・更新する。
 
 ## 前提と注意点
 
-* 振る舞いの正は SPEC.md。仕様を変える変更では SPEC.md も更新する
+* 振る舞いの正は docs/spec.md。仕様を変える変更では docs/spec.md も更新する
 * CI は ubuntu で動く。テストは `test/fixtures/` の出力サンプルを使う純粋関数だけを対象にし、実際の `launchctl` や `~/Library/LaunchAgents` に触れるテストは書かない
 * 整形を一括適用したコミットは `.git-blame-ignore-revs` にハッシュを登録する。その PR は squash や rebase ではなく merge commit で取り込む（ハッシュが変わると無視されなくなる）
 
@@ -21,7 +22,7 @@
 書くもの:
 
 * その実装を選んだ理由や制約（例: 「launchctl の出力形式は macOS バージョンで変わりうるため、未知の行は無視する」）
-* 仕様に由来する振る舞いの根拠。SPEC.md が出典なら末尾に `(SPEC)` を付ける
+* 仕様に由来する振る舞いの根拠。docs/spec.md が出典なら末尾に `(SPEC)` を付ける
 * 一見不自然に見えるが意図的な書き方の説明
 
 書かないもの:

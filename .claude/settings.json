@@ -5,7 +5,8 @@
       "Bash(bun run format)",
       "Bash(bun run typecheck)",
       "Bash(bun test)",
-      "Bash(bun test *)"
+      "Bash(bun test *)",
+      "Bash(bun run test:e2e)"
     ]
   },
   "hooks": {
