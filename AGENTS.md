@@ -12,6 +12,7 @@
 
 * 振る舞いの正は SPEC.md。仕様を変える変更では SPEC.md も更新する
 * CI は ubuntu で動く。テストは `test/fixtures/` の出力サンプルを使う純粋関数だけを対象にし、実際の `launchctl` や `~/Library/LaunchAgents` に触れるテストは書かない
+* 整形を一括適用したコミットは `.git-blame-ignore-revs` にハッシュを登録する。その PR は squash や rebase ではなく merge commit で取り込む（ハッシュが変わると無視されなくなる）
 
 ## コメント
 
