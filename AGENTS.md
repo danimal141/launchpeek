@@ -12,8 +12,12 @@
 ## 前提と注意点
 
 * 振る舞いの正は docs/spec.md。仕様を変える変更では docs/spec.md も更新する
-* CI は ubuntu で動く。テストは `test/fixtures/` の出力サンプルを使う純粋関数だけを対象にし、実際の `launchctl` や `~/Library/LaunchAgents` に触れるテストは書かない
+* CI は ubuntu で動く。実際の `launchctl` や `~/Library/LaunchAgents` に触れるテストは書かない。ユニットテストは `test/fixtures/` の出力サンプルを使い、E2E テストは偽の `launchctl` と一時ディレクトリの `HOME` を使う
 * 整形を一括適用したコミットは `.git-blame-ignore-revs` にハッシュを登録する。その PR は squash や rebase ではなく merge commit で取り込む（ハッシュが変わると無視されなくなる）
+* このファイルや docs/ と既存のコードが食い違うとき:
+  * 書き方の慣習（命名、構成、テストの書き方など）は既存のコードに従う
+  * 振る舞いが docs/spec.md と食い違うときは、どちらかに合わせて書き換える前に報告する
+  * どちらの場合も、見つけた食い違いを最後の返答ですべて挙げる
 
 ## コメント
 
