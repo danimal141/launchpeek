@@ -305,9 +305,11 @@ export function App() {
     }
   }
 
-  // pty によっては columns/rows が 0 になるため ?? ではなく || で補正する
-  const width = stdout.columns || 80;
-  const height = stdout.rows || 24;
+  // ink 8 から stdout は汎用ストリームとして型付けされ、TTY の columns/rows が型に無い。
+  // TTY でなければ undefined、pty によっては 0 になるため ?? ではなく || で補正する
+  const { columns, rows } = stdout as Partial<NodeJS.WriteStream>;
+  const width = columns || 80;
+  const height = rows || 24;
   const listHeight = Math.max(3, height - 2);
   const listWidth = Math.max(24, Math.floor(width * 0.4));
   const visible = visibleJobs(state);
