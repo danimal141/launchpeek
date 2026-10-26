@@ -11,7 +11,7 @@
 
 ## 前提と注意点
 
-* 振る舞いの正は docs/spec.ja.md。仕様を変える変更では docs/spec.ja.md を更新し、英訳の docs/spec.md も追従させる
+* 目的、スコープ、制約、既定値の正は docs/spec.ja.md。細かな振る舞いの正はテスト（ユニットテストと E2E テスト）。spec.ja.md を変えたら、英訳の docs/spec.md も追従させる
 * CI は ubuntu で動く。実際の `launchctl` や `~/Library/LaunchAgents` に触れるテストは書かない。ユニットテストは `test/fixtures/` の出力サンプルを使い、E2E テストは偽の `launchctl` と一時ディレクトリの `HOME` を使う
 * 整形を一括適用したコミットは `.git-blame-ignore-revs` にハッシュを登録する。その PR は squash や rebase ではなく merge commit で取り込む（ハッシュが変わると無視されなくなる）
 * このファイルや docs/ と既存のコードが食い違うとき:

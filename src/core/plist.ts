@@ -38,7 +38,7 @@ function toCalendarInterval(value: unknown): CalendarInterval | undefined {
   };
 }
 
-// dict でも dict の配列でも受け付け、必ず配列に正規化する (SPEC)
+// dict でも dict の配列でも受け付け、必ず配列に正規化する
 function toCalendarIntervals(value: unknown): CalendarInterval[] | undefined {
   if (value === undefined) return undefined;
   const items = Array.isArray(value) ? value : [value];
@@ -55,7 +55,7 @@ export function parseJobDefinition(
 ): JobDefinition | undefined {
   if (!isRecord(raw)) return undefined;
   const label = asString(raw["Label"]);
-  // Label が無い plist は launchd のジョブとして成立しないので無視する (SPEC)
+  // Label が無い plist は launchd のジョブとして成立しないので無視する
   if (label === undefined) return undefined;
 
   const args = Array.isArray(raw["ProgramArguments"])
@@ -69,12 +69,12 @@ export function parseJobDefinition(
     label,
     plistPath,
     domain,
-    // Program が無ければ ProgramArguments の先頭を program とみなす (SPEC)
+    // Program が無ければ ProgramArguments の先頭を program とみなす
     program: asString(raw["Program"]) ?? args[0],
     arguments: args,
     startInterval: asNumber(raw["StartInterval"]),
     startCalendarInterval: toCalendarIntervals(raw["StartCalendarInterval"]),
-    // KeepAlive は dict (条件付き keepalive) の場合も true とみなす (SPEC)
+    // KeepAlive は dict (条件付き keepalive) の場合も true とみなす
     keepAlive: keepAliveRaw === true || isRecord(keepAliveRaw),
     runAtLoad: raw["RunAtLoad"] === true,
     stdoutPath: asString(raw["StandardOutPath"]),
