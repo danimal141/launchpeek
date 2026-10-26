@@ -333,13 +333,14 @@ export interface AppState {
 ## 検証方法
 
 * `bun test` が全て通ること
-* 自分の環境で以下を手動確認し、README の「動作確認済み」に記録する
-  * 一覧に自分の LaunchAgents が表示される
-  * `r` で任意のジョブを kickstart でき、pid と run count が更新される
+* `bun run test:e2e` が全て通ること。E2E テストは実物のアプリを疑似端末で起動し、偽の `launchctl` と一時ディレクトリの `HOME` に対して以下を確かめる
+  * 一覧に LaunchAgents のジョブが表示される
+  * `r` で kickstart でき、pid と run count が更新される
   * `e` / `d` で enabled が切り替わる
   * ログのあるジョブで `l` を押すとログが表示され、追記が反映される
-  * plist を追加・削除すると一覧に反映される
-* 検証用に `test/fixtures/com.example.launchpeek-demo.plist`（60 秒ごとに date を stdout に書くだけのジョブ）を用意し、README に bootstrap 手順を書く
+  * plist を追加・削除すると一覧に反映され、選択は label で追従する
+  * `u` は y/n の確認を挟み、`U` で bootstrap し直せる
+* 実際の launchd に対する挙動は E2E では確かめない。手元で確かめるときは `test/fixtures/com.example.launchpeek-demo.plist`（60 秒ごとに date を stdout に書くだけのジョブ）を使う。bootstrap 手順は README にある
 
 ## コーディング規約
 
@@ -347,7 +348,7 @@ export interface AppState {
 * `core/` は Ink と React に依存しない純粋なモジュールにする
 * 非同期処理は必ず try / catch し、失敗は戻り値か warnings で伝える
 * コメントは「なぜ」を書く。launchctl の出力形式に依存している箇所には必ずその旨を書く
-* フォーマットは `bun fmt` 相当（Prettier 既定）に従う
+* フォーマットと lint は Biome（`bun run lint`）に従う
 * コミットは作業手順の単位で分ける
 
 ## やってはいけないこと

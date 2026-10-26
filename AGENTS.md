@@ -4,9 +4,10 @@
 
 * `bun run lint`: Biome で format と lint をチェックする（CI と同じ）
 * `bun run format`: Biome の自動修正を適用する
-* `bun run typecheck` / `bun test`: 型チェックとテスト
+* `bun run typecheck` / `bun test`: 型チェックとユニットテスト
+* `bun run test:e2e`: アプリを疑似端末で起動する E2E テスト（`test/e2e/`）
 
-変更後は上の 3 つ（lint、typecheck、test）が通ることを確認する。
+変更後は上の 4 つ（lint、typecheck、test、test:e2e）が通ることを確認する。画面やキー操作の振る舞いを変えたら、E2E テストも追加・更新する。
 
 ## 前提と注意点
 
