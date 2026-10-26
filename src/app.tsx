@@ -145,7 +145,6 @@ export function App() {
     async (kind: ActionKind, job: Job) => {
       const result = await runAction(kind, job);
       showMessage(result.message);
-      // 実行後は必ず状態を再取得する (SPEC)
       void refresh();
     },
     [refresh, showMessage],
@@ -252,7 +251,6 @@ export function App() {
       } else if (state.mode === "detail") {
         dispatch({ type: "set-mode", mode: "list" });
       } else if (key.escape && state.filter !== "") {
-        // list で Esc: フィルタが掛かっていれば解除する (SPEC)
         dispatch({ type: "filter-clear" });
       } else {
         exit();

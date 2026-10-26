@@ -164,7 +164,7 @@ export function logSourcesOf(
   return sources;
 }
 
-// 表示用: ファイルごとに末尾 N 行を連結する (時系列に混ぜない、SPEC)
+// 表示用: ファイルごとに末尾 N 行を連結する (時系列に混ぜない)
 export function formatLogLines(tails: LogFileTail[]): string[] {
   const lines: string[] = [];
   for (const tail of tails) {

@@ -12,7 +12,7 @@ function matchesMonth(ci: CalendarInterval, t: Date): boolean {
 
 function matchesDay(ci: CalendarInterval, t: Date): boolean {
   const dayOk = ci.day === undefined || ci.day === t.getDate();
-  // weekday は 0 と 7 を日曜として扱う (SPEC)
+  // weekday は 0 と 7 を日曜として扱う
   const weekdayOk = ci.weekday === undefined || ci.weekday % 7 === t.getDay();
   return dayOk && weekdayOk;
 }

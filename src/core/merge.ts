@@ -8,7 +8,6 @@ import type {
 import type { ListEntry, PrintInfo } from "./launchctl";
 import { nextRun } from "./schedule";
 
-// category は SPEC の規則どおり上から順に評価し、最初に一致したものを採用する
 export function categorize(
   runtime: JobRuntime,
   nextRun: Date | undefined,

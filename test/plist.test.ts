@@ -55,7 +55,7 @@ describe("loadDefinition", () => {
       hour: 18,
       minute: 15,
     });
-    // KeepAlive が dict の場合は true とみなす (SPEC)
+    // KeepAlive が dict の場合は true とみなす
     expect(definition?.keepAlive).toBe(true);
   });
 
