@@ -50,6 +50,7 @@ export interface AppHandle {
 export async function startApp(
   plists: PlistSpec[],
   launchd: FakeLaunchdState,
+  command: string[] = [process.execPath, join(ROOT, "src/index.tsx")],
 ): Promise<AppHandle> {
   const home = await mkdtemp(join(tmpdir(), "launchpeek-e2e-"));
   const agentsDir = join(home, "Library/LaunchAgents");
@@ -71,7 +72,7 @@ export async function startApp(
   let output = "";
   let mark = 0;
   const decoder = new TextDecoder();
-  const proc = Bun.spawn([process.execPath, join(ROOT, "src/index.tsx")], {
+  const proc = Bun.spawn(command, {
     cwd: ROOT,
     // Ink は CI 等の環境変数があると対話的な再描画をやめるため、必要なものだけ渡す
     env: {

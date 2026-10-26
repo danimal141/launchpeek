@@ -340,6 +340,7 @@ export interface AppState {
   * ログのあるジョブで `l` を押すとログが表示され、追記が反映される
   * plist を追加・削除すると一覧に反映され、選択は label で追従する
   * `u` は y/n の確認を挟み、`U` で bootstrap し直せる
+  * `bun run build` で作った単一バイナリが起動して一覧が表示される
 * 実際の launchd に対する挙動は E2E では確かめない。手元で確かめるときは `test/fixtures/com.example.launchpeek-demo.plist`（60 秒ごとに date を stdout に書くだけのジョブ）を使う。bootstrap 手順は README にある
 
 ## コーディング規約

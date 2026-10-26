@@ -3,10 +3,12 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { appendFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { $ } from "bun";
 import { type AppHandle, plistXml, startApp } from "./harness";
 
 const TICK = "com.example.tick";
 const TIMEOUT_MS = 20000;
+const ROOT = join(import.meta.dir, "../..");
 
 let app: AppHandle | undefined;
 
@@ -163,6 +165,20 @@ describe("launchpeek e2e", () => {
       app.press("U");
       await app.waitFor(/bootstrap com\.example\.tick: ok/);
       expect((await app.state()).loaded[TICK]).toBeDefined();
+    },
+    TIMEOUT_MS,
+  );
+
+  test(
+    "単一バイナリが起動して一覧が表示される",
+    async () => {
+      await $`bun run build`.cwd(ROOT).quiet();
+      app = await startApp(
+        [{ label: TICK, startInterval: 60 }],
+        { loaded: { [TICK]: { runs: 0 } }, disabled: [] },
+        [join(ROOT, "launchpeek")],
+      );
+      await app.waitFor(/scheduled\s+com\.example\.tick/);
     },
     TIMEOUT_MS,
   );
