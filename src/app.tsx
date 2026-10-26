@@ -309,7 +309,6 @@ export function App() {
   const width = stdout.columns || 80;
   const height = stdout.rows || 24;
   const listHeight = Math.max(3, height - 2);
-  // detail モードでは左 4 割を縮小 JobList に使う
   const listWidth = Math.max(24, Math.floor(width * 0.4));
   const visible = visibleJobs(state);
 
