@@ -1,7 +1,7 @@
 // 実物のアプリを PTY で起動し、キー入力に対する画面と launchctl への操作を確かめる。
 // launchctl は fake-launchctl.ts に差し替えるので、launchd 側の実際の挙動は検証しない
 import { afterEach, describe, expect, test } from "bun:test";
-import { appendFile, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { $ } from "bun";
 import { type AppHandle, plistXml, startApp } from "./harness";
@@ -84,25 +84,51 @@ describe("launchpeek e2e", () => {
   );
 
   test(
-    "l でログを開き、表示中の追記が反映される",
+    "ログを折り返し、スクロール中は固定し、G で追記への追従を再開する",
     async () => {
       const logPath = join(
         process.env.TMPDIR ?? "/tmp",
         `launchpeek-e2e-${process.pid}.log`,
       );
-      await writeFile(logPath, "first line\n");
+      await writeFile(
+        logPath,
+        `${"a".repeat(130)}WRAPPED\n${Array.from({ length: 40 }, (_, i) => `line ${i}`).join("\n")}\n`,
+      );
       try {
         app = await startApp(
           [{ label: TICK, startInterval: 60, stdoutPath: logPath }],
           { loaded: { [TICK]: { runs: 0 } }, disabled: [] },
         );
         await app.waitFor(/com\.example\.tick/);
+        const configDir = join(app.home, ".config/launchpeek");
+        await mkdir(configDir, { recursive: true });
+        await writeFile(
+          join(configDir, "config.json"),
+          JSON.stringify({
+            extraLogPaths: { [TICK]: ["relative.log", logPath] },
+          }),
+        );
+        app.press("R");
+        await app.waitFor(/1 w/);
         await selectOnly(app, "tick");
         app.press("l");
-        await app.waitFor(/first line/);
+        await app.waitFor(/FOLLOW/);
+        await app.waitFor(/config:/);
+        await app.waitFor(/line 39/);
+
+        app.press("g");
+        await app.waitFor(/PAUSED/);
+        await app.waitFor(/WRAPPED/);
+        await app.waitFor(/rows: 1-/);
+        app.press("\x1b[B");
+        await app.waitFor(/rows: 2-/);
+        app.press("k");
+        await app.waitFor(/rows: 1-/);
 
         await appendFile(logPath, "appended line\n");
-        // logs モードは 1 秒間隔で差分を読む (spec)
+        await Bun.sleep(1200);
+        app.press("G");
+        await app.waitFor(/FOLLOW/);
         await app.waitFor(/appended line/, 3000);
       } finally {
         await rm(logPath, { force: true });

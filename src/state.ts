@@ -1,4 +1,5 @@
 import { emptyConfig, type UserConfig } from "./core/config";
+import { type LogView, scrollLog } from "./core/log-view";
 import type { ActionKind, Job } from "./types";
 
 export type Mode = "list" | "detail" | "logs";
@@ -13,6 +14,7 @@ export interface AppState {
   message?: string;
   pendingConfirm?: { kind: ActionKind; job: Job };
   logLines: string[];
+  logView: LogView;
   config: UserConfig;
   configWarnings: string[];
   lastUpdated?: Date;
@@ -29,6 +31,7 @@ export const initialState: AppState = {
   filter: "",
   filterEditing: false,
   logLines: [],
+  logView: {},
   config: emptyConfig(),
   configWarnings: [],
   loading: true,
@@ -44,6 +47,13 @@ export type Action =
   | { type: "open-logs" }
   | { type: "close-logs" }
   | { type: "log-lines"; lines: string[] }
+  | {
+      type: "log-scroll";
+      movement: number | "first";
+      width: number;
+      rows: number;
+    }
+  | { type: "log-follow" }
   | { type: "config-updated"; config: UserConfig; warnings: string[] }
   | { type: "set-message"; message: string }
   | { type: "clear-message" }
@@ -120,9 +130,28 @@ export function reducer(state: AppState, action: Action): AppState {
         mode: "logs",
         logsReturnMode: state.mode,
         logLines: [],
+        logView: {},
       };
     case "close-logs":
-      return { ...state, mode: state.logsReturnMode, logLines: [] };
+      return {
+        ...state,
+        mode: state.logsReturnMode,
+        logLines: [],
+        logView: {},
+      };
+    case "log-scroll":
+      return {
+        ...state,
+        logView: scrollLog(
+          state.logLines,
+          state.logView,
+          action.width,
+          action.rows,
+          action.movement,
+        ),
+      };
+    case "log-follow":
+      return { ...state, logView: {} };
     case "config-updated":
       return {
         ...state,

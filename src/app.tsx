@@ -1,4 +1,4 @@
-import { Box, useApp, useInput, useStdout } from "ink";
+import { Box, useApp, useInput, useWindowSize } from "ink";
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { runAction } from "./core/actions";
 import { copyLabel } from "./core/clipboard";
@@ -10,6 +10,7 @@ import {
   type ListEntry,
   type PrintInfo,
 } from "./core/launchctl";
+import { logBodyRows, logViewport } from "./core/log-view";
 import {
   formatLogLines,
   type LogFileTail,
@@ -45,7 +46,7 @@ const ACTION_KEYS: Record<string, ActionKind> = {
 
 export function App() {
   const { exit } = useApp();
-  const { stdout } = useStdout();
+  const terminalSize = useWindowSize();
   const [state, dispatch] = useReducer(reducer, initialState);
 
   const refreshing = useRef(false);
@@ -257,8 +258,25 @@ export function App() {
       }
       return;
     }
-    // logs は全画面表示なので閲覧キー以外は受け付けない
-    if (state.mode === "logs") return;
+    if (state.mode === "logs") {
+      if (input === "G") dispatch({ type: "log-follow" });
+      else if (
+        input === "g" ||
+        input === "j" ||
+        input === "k" ||
+        key.upArrow ||
+        key.downArrow
+      ) {
+        dispatch({
+          type: "log-scroll",
+          movement:
+            input === "g" ? "first" : input === "k" || key.upArrow ? -1 : 1,
+          width,
+          rows: logBodyRows(height - 1, state.configWarnings.length),
+        });
+      }
+      return;
+    }
 
     if (input === "/") {
       dispatch({ type: "filter-editing", editing: true });
@@ -303,11 +321,9 @@ export function App() {
     }
   }
 
-  // ink 8 から stdout は汎用ストリームとして型付けされ、TTY の columns/rows が型に無い。
-  // TTY でなければ undefined、pty によっては 0 になるため ?? ではなく || で補正する
-  const { columns, rows } = stdout as Partial<NodeJS.WriteStream>;
-  const width = columns || 80;
-  const height = rows || 24;
+  // pty によっては columns/rows が 0 になるため ?? ではなく || で補正する
+  const width = terminalSize.columns || 80;
+  const height = terminalSize.rows || 24;
   const listHeight = Math.max(3, height - 2);
   const listWidth = Math.max(24, Math.floor(width * 0.4));
   const visible = visibleJobs(state);
@@ -333,9 +349,15 @@ export function App() {
       <Box flexDirection="column" width={width}>
         <LogTail
           job={selectedJob(state)}
+          viewport={logViewport(
+            state.logLines,
+            state.logView,
+            width,
+            logBodyRows(height - 1, state.configWarnings.length),
+          )}
+          paused={state.logView.paused !== undefined}
           extraPaths={extraPaths}
           warnings={state.configWarnings}
-          lines={state.logLines}
           height={height - 1}
         />
         {statusLine}

@@ -104,3 +104,17 @@ Labels must match exactly. Paths must be absolute or start with `~/`; relative p
 Extra logs are shown as `[log1]`, `[log2]`, and so on in the configured order, and duplicate paths are shown only once.
 The config is reloaded at the same interval as the list. Config warnings are shown on the logs screen and in the status bar.
 Invalid entries are ignored while the remaining valid entries are still loaded. Missing files are shown as read errors.
+
+## Browsing logs
+
+Long lines wrap with Japanese character widths, ANSI colors, and tabs preserved.
+Log files appear in source order and initially follow the latest output.
+
+* `j` / `k` or arrow keys: scroll by display rows and pause following
+* `g`: go to the start of the retained logs
+* `G`: return to the latest output and resume following
+
+`FOLLOW` indicates live updates; `PAUSED` holds a snapshot while files grow or rotate.
+`rows` shows positions after wrapping, rather than file line numbers.
+Only the last 200 lines per file are retained. Search and automatic loading of older files are not supported.
+ANSI colors are preserved without coloring all stderr output red.
