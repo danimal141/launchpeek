@@ -2,8 +2,9 @@ import { Text } from "ink";
 import type { Mode } from "../state";
 
 const MODE_KEYS: Record<Mode, string> = {
-  list: "j/k g/G:move  Enter:detail  l:logs  c/y:copy  r:kick  e/d:en/dis  u/U:out/strap  x:kill  /:filter  R:reload  q:quit",
-  detail: "j/k:move  l:logs  c/y:copy  r:kick  e/d:en/dis  u/U:out/strap  x:kill  q/Esc:back",
+  list: "j/k g/G:move  Enter:detail  l:logs  y:copy  r:kick  e/d:en/dis  u/U:out/strap  x:kill  /:filter  R:reload  q:quit",
+  detail:
+    "j/k:move  l:logs  y:copy  r:kick  e/d:en/dis  u/U:out/strap  x:kill  q/Esc:back",
   logs: "j/k:scroll  g/G:first/follow  q/Esc:back",
 };
 
@@ -23,7 +24,11 @@ export function StatusBar({ mode, message, confirmPrompt, warnings }: Props) {
     );
   }
   if (message !== undefined) {
-    return <Text color="yellow" wrap="truncate-end">{message}</Text>;
+    return (
+      <Text color="yellow" wrap="truncate-end">
+        {message}
+      </Text>
+    );
   }
   return (
     <Text dimColor wrap="truncate-end">

@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { parseList, parsePrint, parsePrintDisabled } from "../src/core/launchctl";
+import {
+  parseList,
+  parsePrint,
+  parsePrintDisabled,
+} from "../src/core/launchctl";
 
 const readFixture = (name: string) =>
   Bun.file(new URL(`./fixtures/${name}`, import.meta.url)).text();
@@ -49,7 +53,10 @@ describe("parseList", () => {
 
 describe("parsePrint", () => {
   test("running なジョブの pid / state / runs を読む", async () => {
-    const info = parsePrint(await readFixture("launchctl-print-running.txt"), 0);
+    const info = parsePrint(
+      await readFixture("launchctl-print-running.txt"),
+      0,
+    );
     expect(info).toEqual({
       loaded: true,
       pid: 1477,
@@ -79,7 +86,9 @@ describe("parsePrint", () => {
   });
 
   test("終了コード非 0 は未ロード", () => {
-    expect(parsePrint("Could not find service", 113)).toEqual({ loaded: false });
+    expect(parsePrint("Could not find service", 113)).toEqual({
+      loaded: false,
+    });
   });
 
   test("空出力でも落ちない", () => {

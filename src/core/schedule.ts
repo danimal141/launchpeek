@@ -12,9 +12,8 @@ function matchesMonth(ci: CalendarInterval, t: Date): boolean {
 
 function matchesDay(ci: CalendarInterval, t: Date): boolean {
   const dayOk = ci.day === undefined || ci.day === t.getDate();
-  // weekday は 0 と 7 を日曜として扱う (SPEC)
-  const weekdayOk =
-    ci.weekday === undefined || ci.weekday % 7 === t.getDay();
+  // weekday は 0 と 7 を日曜として扱う
+  const weekdayOk = ci.weekday === undefined || ci.weekday % 7 === t.getDay();
   return dayOk && weekdayOk;
 }
 
@@ -57,7 +56,10 @@ export function nextRun(def: JobDefinition, now: Date): Date | undefined {
     let earliest: Date | undefined;
     for (const ci of intervals) {
       const candidate = nextCalendarRun(ci, now);
-      if (candidate !== undefined && (earliest === undefined || candidate < earliest)) {
+      if (
+        candidate !== undefined &&
+        (earliest === undefined || candidate < earliest)
+      ) {
         earliest = candidate;
       }
     }

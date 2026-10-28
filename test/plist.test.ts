@@ -31,7 +31,13 @@ describe("loadDefinition", () => {
       "user",
     );
     expect(definition?.startCalendarInterval).toEqual([
-      { minute: 30, hour: 9, day: undefined, weekday: undefined, month: undefined },
+      {
+        minute: 30,
+        hour: 9,
+        day: undefined,
+        weekday: undefined,
+        month: undefined,
+      },
     ]);
     // Program が無い場合は ProgramArguments の先頭が program になる
     expect(definition?.program).toBe("/bin/bash");
@@ -49,7 +55,7 @@ describe("loadDefinition", () => {
       hour: 18,
       minute: 15,
     });
-    // KeepAlive が dict の場合は true とみなす (SPEC)
+    // KeepAlive が dict の場合は true とみなす
     expect(definition?.keepAlive).toBe(true);
   });
 

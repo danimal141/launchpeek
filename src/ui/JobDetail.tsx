@@ -5,6 +5,7 @@ import { formatTime, summarizeSchedule } from "../util/format";
 interface Props {
   job?: Job;
   height: number;
+  extraPaths?: readonly string[];
 }
 
 function Row({ name, value }: { name: string; value: string }) {
@@ -18,7 +19,7 @@ function Row({ name, value }: { name: string; value: string }) {
   );
 }
 
-export function JobDetail({ job, height }: Props) {
+export function JobDetail({ job, height, extraPaths = [] }: Props) {
   if (!job) {
     return (
       <Box height={height} paddingLeft={1}>
@@ -51,6 +52,9 @@ export function JobDetail({ job, height }: Props) {
       />
       <Row name="stdout" value={job.stdoutPath ?? "-"} />
       <Row name="stderr" value={job.stderrPath ?? "-"} />
+      {extraPaths.map((path, i) => (
+        <Row key={path} name={`log${i + 1}`} value={path} />
+      ))}
       <Row name="pid" value={rt.pid?.toString() ?? "-"} />
       <Row
         name="state"
@@ -58,7 +62,10 @@ export function JobDetail({ job, height }: Props) {
       />
       <Row name="last exit" value={rt.lastExitCode?.toString() ?? "-"} />
       <Row name="run count" value={rt.runCount?.toString() ?? "-"} />
-      <Row name="next run" value={job.nextRun ? formatTime(job.nextRun) : "-"} />
+      <Row
+        name="next run"
+        value={job.nextRun ? formatTime(job.nextRun) : "-"}
+      />
     </Box>
   );
 }

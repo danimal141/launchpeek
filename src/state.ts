@@ -1,4 +1,5 @@
-import { scrollLog, type LogView } from "./core/log-view";
+import { emptyConfig, type UserConfig } from "./core/config";
+import { type LogView, scrollLog } from "./core/log-view";
 import type { ActionKind, Job } from "./types";
 
 export type Mode = "list" | "detail" | "logs";
@@ -14,6 +15,8 @@ export interface AppState {
   pendingConfirm?: { kind: ActionKind; job: Job };
   logLines: string[];
   logView: LogView;
+  config: UserConfig;
+  configWarnings: string[];
   lastUpdated?: Date;
   loading: boolean;
   // logs モードは list と detail の両方から入れるため、戻り先を覚えておく
@@ -29,6 +32,8 @@ export const initialState: AppState = {
   filterEditing: false,
   logLines: [],
   logView: {},
+  config: emptyConfig(),
+  configWarnings: [],
   loading: true,
   logsReturnMode: "list",
 };
@@ -42,8 +47,14 @@ export type Action =
   | { type: "open-logs" }
   | { type: "close-logs" }
   | { type: "log-lines"; lines: string[] }
-  | { type: "log-scroll"; movement: number | "first"; width: number; rows: number }
+  | {
+      type: "log-scroll";
+      movement: number | "first";
+      width: number;
+      rows: number;
+    }
   | { type: "log-follow" }
+  | { type: "config-updated"; config: UserConfig; warnings: string[] }
   | { type: "set-message"; message: string }
   | { type: "clear-message" }
   | { type: "confirm-request"; kind: ActionKind; job: Job }
@@ -71,7 +82,7 @@ function withFilter(state: AppState, filter: string): AppState {
   const next: AppState = { ...state, filter };
   const visible = visibleJobs(next);
   const followed = visible.findIndex((job) => job.label === prevLabel);
-  next.selectedIndex = followed >= 0 ? followed : 0;
+  next.selectedIndex = Math.max(followed, 0);
   return next;
 }
 
@@ -122,14 +133,31 @@ export function reducer(state: AppState, action: Action): AppState {
         logView: {},
       };
     case "close-logs":
-      return { ...state, mode: state.logsReturnMode, logLines: [], logView: {} };
+      return {
+        ...state,
+        mode: state.logsReturnMode,
+        logLines: [],
+        logView: {},
+      };
     case "log-scroll":
       return {
         ...state,
-        logView: scrollLog(state.logLines, state.logView, action.width, action.rows, action.movement),
+        logView: scrollLog(
+          state.logLines,
+          state.logView,
+          action.width,
+          action.rows,
+          action.movement,
+        ),
       };
     case "log-follow":
       return { ...state, logView: {} };
+    case "config-updated":
+      return {
+        ...state,
+        config: action.config,
+        configWarnings: action.warnings,
+      };
     case "log-lines":
       return { ...state, logLines: action.lines };
     case "set-message":
@@ -137,7 +165,10 @@ export function reducer(state: AppState, action: Action): AppState {
     case "clear-message":
       return { ...state, message: undefined };
     case "confirm-request":
-      return { ...state, pendingConfirm: { kind: action.kind, job: action.job } };
+      return {
+        ...state,
+        pendingConfirm: { kind: action.kind, job: action.job },
+      };
     case "confirm-clear":
       return { ...state, pendingConfirm: undefined };
     case "filter-editing":
@@ -152,7 +183,10 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, selectedIndex: 0 };
     case "select-last": {
       const visible = visibleJobs(state);
-      return { ...state, selectedIndex: clampIndex(visible.length - 1, visible.length) };
+      return {
+        ...state,
+        selectedIndex: clampIndex(visible.length - 1, visible.length),
+      };
     }
   }
 }

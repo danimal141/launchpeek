@@ -2,6 +2,7 @@ import { Box, useApp, useInput, useWindowSize } from "ink";
 import { useCallback, useEffect, useReducer, useRef } from "react";
 import { runAction } from "./core/actions";
 import { copyLabel } from "./core/clipboard";
+import { extraLogPathsFor, loadConfig } from "./core/config";
 import {
   fetchDisabledLabels,
   fetchList,
@@ -9,14 +10,14 @@ import {
   type ListEntry,
   type PrintInfo,
 } from "./core/launchctl";
+import { logBodyRows, logViewport } from "./core/log-view";
 import {
   formatLogLines,
+  type LogFileTail,
   logSourcesOf,
   refreshTail,
   tailFile,
-  type LogFileTail,
 } from "./core/logs";
-import { logBodyRows, logViewport } from "./core/log-view";
 import { emptySources, mergeJobs } from "./core/merge";
 import { loadDefinitions } from "./core/plist";
 import { watchAgentDirs } from "./core/watcher";
@@ -57,6 +58,7 @@ export function App() {
       // 遅い launchctl print の詳細は後から埋めて再描画する
       const warnings: string[] = [];
       const sources = emptySources();
+      const configPromise = loadConfig();
       let definitions: Awaited<
         ReturnType<typeof loadDefinitions>
       >["definitions"] = [];
@@ -74,6 +76,12 @@ export function App() {
       } catch (err) {
         warnings.push(String(err));
       }
+      const configResult = await configPromise;
+      dispatch({
+        type: "config-updated",
+        config: configResult.config,
+        warnings: configResult.warnings,
+      });
       dispatch({
         type: "jobs-updated",
         jobs: mergeJobs(definitions, sources, new Date()),
@@ -138,7 +146,6 @@ export function App() {
     async (kind: ActionKind, job: Job) => {
       const result = await runAction(kind, job);
       showMessage(result.message);
-      // 実行後は必ず状態を再取得する (SPEC)
       void refresh();
     },
     [refresh, showMessage],
@@ -148,7 +155,20 @@ export function App() {
   const jobsRef = useRef(state.jobs);
   jobsRef.current = state.jobs;
   const selectedLabel = selectedJob(state)?.label;
+  const configuredPaths = selectedLabel
+    ? extraLogPathsFor(state.config, selectedLabel)
+    : [];
+  const logJob = selectedJob(state);
+  const extraPaths = logJob
+    ? logSourcesOf(logJob, configuredPaths)
+        .filter((source) => source.kind !== "out" && source.kind !== "err")
+        .map((source) => source.path)
+    : [];
+  const extraPathsRef = useRef(extraPaths);
+  extraPathsRef.current = extraPaths;
+  const extraPathsKey = extraPaths.join("\u0000");
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: extraPathsKey は追加ログパスの変化で tail を張り直すためのトリガー
   useEffect(() => {
     if (state.mode !== "logs") return;
     const job = jobsRef.current.find((j) => j.label === selectedLabel);
@@ -159,12 +179,15 @@ export function App() {
     let tails: LogFileTail[] = [];
 
     const publish = () => {
-      if (!stopped) dispatch({ type: "log-lines", lines: formatLogLines(tails) });
+      if (!stopped)
+        dispatch({ type: "log-lines", lines: formatLogLines(tails) });
     };
 
     (async () => {
       tails = await Promise.all(
-        logSourcesOf(job).map((s) => tailFile(s.kind, s.path)),
+        logSourcesOf(job, extraPathsRef.current).map((s) =>
+          tailFile(s.kind, s.path),
+        ),
       );
       publish();
     })();
@@ -186,7 +209,7 @@ export function App() {
       stopped = true;
       clearInterval(timer);
     };
-  }, [state.mode, selectedLabel]);
+  }, [state.mode, selectedLabel, extraPathsKey]);
 
   // 高速連打やペーストでは複数キーが 1 チャンクで届くため、1 文字ずつ処理する
   useInput((chunk, key) => {
@@ -198,7 +221,6 @@ export function App() {
     input: string,
     key: Parameters<Parameters<typeof useInput>[0]>[1],
   ) {
-    // 確認待ち中は y で実行、n / Esc / q で取り消し。他のキーは無視する
     if (state.pendingConfirm !== undefined) {
       const { kind, job } = state.pendingConfirm;
       if (input === "y") {
@@ -210,7 +232,6 @@ export function App() {
       return;
     }
 
-    // フィルタ編集中は文字入力として扱う
     if (state.filterEditing) {
       if (key.escape) {
         dispatch({ type: "filter-clear" });
@@ -231,7 +252,6 @@ export function App() {
       } else if (state.mode === "detail") {
         dispatch({ type: "set-mode", mode: "list" });
       } else if (key.escape && state.filter !== "") {
-        // list で Esc: フィルタが掛かっていれば解除する (SPEC)
         dispatch({ type: "filter-clear" });
       } else {
         exit();
@@ -240,11 +260,19 @@ export function App() {
     }
     if (state.mode === "logs") {
       if (input === "G") dispatch({ type: "log-follow" });
-      else if (input === "g" || input === "j" || input === "k" || key.upArrow || key.downArrow) {
+      else if (
+        input === "g" ||
+        input === "j" ||
+        input === "k" ||
+        key.upArrow ||
+        key.downArrow
+      ) {
         dispatch({
           type: "log-scroll",
-          movement: input === "g" ? "first" : input === "k" || key.upArrow ? -1 : 1,
-          width, rows: logBodyRows(height - 1),
+          movement:
+            input === "g" ? "first" : input === "k" || key.upArrow ? -1 : 1,
+          width,
+          rows: logBodyRows(height - 1, state.configWarnings.length),
         });
       }
       return;
@@ -258,7 +286,7 @@ export function App() {
       void refresh();
       return;
     }
-    if (input === "c" || input === "y") {
+    if (input === "y") {
       const job = selectedJob(state);
       if (job) {
         void copyLabel(job.label).then((result) => showMessage(result.message));
@@ -297,7 +325,6 @@ export function App() {
   const width = terminalSize.columns || 80;
   const height = terminalSize.rows || 24;
   const listHeight = Math.max(3, height - 2);
-  // detail モードでは左 4 割を縮小 JobList に使う
   const listWidth = Math.max(24, Math.floor(width * 0.4));
   const visible = visibleJobs(state);
 
@@ -313,18 +340,24 @@ export function App() {
       mode={state.mode}
       message={state.message}
       confirmPrompt={confirmPrompt}
-      warnings={state.warnings}
+      warnings={[...state.warnings, ...state.configWarnings]}
     />
   );
 
   if (state.mode === "logs") {
-    // 全画面で LogTail。上部 1 行に label とファイルパス (SPEC)
     return (
       <Box flexDirection="column" width={width}>
         <LogTail
           job={selectedJob(state)}
-          viewport={logViewport(state.logLines, state.logView, width, logBodyRows(height - 1))}
+          viewport={logViewport(
+            state.logLines,
+            state.logView,
+            width,
+            logBodyRows(height - 1, state.configWarnings.length),
+          )}
           paused={state.logView.paused !== undefined}
+          extraPaths={extraPaths}
+          warnings={state.configWarnings}
           height={height - 1}
         />
         {statusLine}
@@ -352,7 +385,11 @@ export function App() {
               compact
             />
           </Box>
-          <JobDetail job={selectedJob(state)} height={listHeight} />
+          <JobDetail
+            job={selectedJob(state)}
+            height={listHeight}
+            extraPaths={extraPaths}
+          />
         </Box>
       ) : (
         <JobList

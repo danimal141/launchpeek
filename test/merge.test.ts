@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { ListEntry, PrintInfo } from "../src/core/launchctl";
-import { buildRuntime, categorize, emptySources, mergeJobs } from "../src/core/merge";
+import {
+  buildRuntime,
+  categorize,
+  emptySources,
+  mergeJobs,
+} from "../src/core/merge";
 import type { JobDefinition, JobRuntime } from "../src/types";
 
 function runtime(overrides: Partial<JobRuntime>): JobRuntime {
@@ -15,7 +20,12 @@ function runtime(overrides: Partial<JobRuntime>): JobRuntime {
 
 describe("categorize", () => {
   test("pid があれば busy (最優先)", () => {
-    expect(categorize(runtime({ pid: 1, lastExitCode: 1, enabled: false }), new Date())).toBe("busy");
+    expect(
+      categorize(
+        runtime({ pid: 1, lastExitCode: 1, enabled: false }),
+        new Date(),
+      ),
+    ).toBe("busy");
   });
 
   test("lastExitCode 非 0 は failed", () => {
@@ -24,7 +34,9 @@ describe("categorize", () => {
   });
 
   test("enabled false または loaded false は disabled", () => {
-    expect(categorize(runtime({ enabled: false }), new Date())).toBe("disabled");
+    expect(categorize(runtime({ enabled: false }), new Date())).toBe(
+      "disabled",
+    );
     expect(categorize(runtime({ loaded: false }), new Date())).toBe("disabled");
   });
 
@@ -49,7 +61,11 @@ function definition(label: string): JobDefinition {
 describe("buildRuntime", () => {
   test("print 未取得なら launchctl list の情報でロード済みとみなす", () => {
     const sources = emptySources();
-    sources.list.set("a", { label: "a", pid: 123, lastExitCode: 0 } satisfies ListEntry);
+    sources.list.set("a", {
+      label: "a",
+      pid: 123,
+      lastExitCode: 0,
+    } satisfies ListEntry);
     const rt = buildRuntime("a", sources);
     expect(rt).toMatchObject({ loaded: true, pid: 123, state: "running" });
   });

@@ -8,7 +8,7 @@ const job = {
 } as Job;
 
 describe("actionCommand", () => {
-  test("SPEC どおりのコマンドを組み立てる", () => {
+  test("launchctl のコマンドを組み立てる", () => {
     expect(actionCommand("kickstart", job, 504)).toEqual([
       "launchctl",
       "kickstart",

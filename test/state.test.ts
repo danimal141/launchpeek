@@ -16,7 +16,11 @@ function job(label: string): Job {
   };
 }
 
-const jobs = [job("com.example.alpha"), job("com.example.Beta"), job("org.other.gamma")];
+const jobs = [
+  job("com.example.alpha"),
+  job("com.example.Beta"),
+  job("org.other.gamma"),
+];
 const loaded = reducer(initialState, {
   type: "jobs-updated",
   jobs,
