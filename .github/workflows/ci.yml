@@ -4,6 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
+  # bun の依存は Dependabot alerts に載らないため、新しい advisory を週次の audit で拾う
+  schedule:
+    - cron: "0 0 * * 1"
 
 jobs:
   test:
@@ -26,3 +29,14 @@ jobs:
       # 実物のアプリを PTY で起動し、偽の launchctl に対して操作を確かめる
       - run: bun run test:e2e
         if: hashFiles('bun.lock') != ''
+
+  # 新しい advisory で無関係な PR の自動マージが止まらないよう、必須チェックの test とは分ける
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun audit --audit-level=high
